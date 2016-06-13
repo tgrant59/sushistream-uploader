@@ -1,0 +1,26 @@
+// Variables
+$white: #fff;
+$black: #000;
+$grey: #808080;
+$orange: #f2711c;
+$orange-transparent: rgba(242, 113, 28, .8);
+$aqua: #129b80;
+$aqua-transparent: rgba(18, 155, 128, .6);
+$lightgrey: #fafafa;
+$darkgrey: #525252;
+$white-transparent: rgba(255, 255, 255, .75);
+$white-barely-transparent: rgba(255, 255, 255, .85);
+$link-blue: #0645ad;
+// ---------
+
+.main-container {
+  bottom: 0;
+  left: 0;
+  position: relative;
+  right: 0;
+  top: 0;
+}
+
+.centered {
+  text-align: center;
+}

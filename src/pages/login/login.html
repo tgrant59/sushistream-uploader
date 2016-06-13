@@ -1,0 +1,41 @@
+<div class="login-background">
+  <div class="image">
+
+    <div class="ui padded container segment" id="login-container">
+      <div class="login-header">SushiStream Uploader</div>
+      <div class="ui form" id="login-form" ng-submit="loginFormSubmit()">
+        <div class="field">
+          <label>Email</label>
+          <div class="ui left icon input">
+            <input type="email" placeholder="Email" maxlength="256" name="loginEmail">
+            <i class="user icon"></i>
+          </div>
+        </div>
+        <div class="field">
+          <label>Password</label><span class="login-forgot" ng-click="openExternalLogin()">Forgot?</span>
+          <div class="ui left icon input">
+            <input type="password" placeholder="Password" maxlength="256" name="loginPassword">
+            <i class="lock icon"></i>
+          </div>
+        </div>
+        <div class="ui blue fluid submit button">Login</div>
+        <div class="ui error message"></div>
+        <div class="ui red message" ng-if="loginFormError">
+          <p ng-if="loginPasswordIncorrect">Sorry, wrong password. Try again</p>
+          <p ng-if="loginEmailIncorrect">Sorry, no account found with that email address</p>
+          <p ng-if="loginUnspecifiedError">Uh oh, something went wrong on our end. Try again later</p>
+        </div>
+      </div>
+      <div class="ui divider"></div>
+      <div class="ui two column grid">
+        <div class="right aligned column" id="login-no-account">No Account?</div>
+        <div class="column">
+          <a class="ui green button" ng-click="openExternalLogin()">
+            Sign Up
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

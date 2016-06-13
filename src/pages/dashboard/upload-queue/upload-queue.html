@@ -1,0 +1,52 @@
+<div class="upload-queue-background">
+
+  <div id="upload-queue" class="ui middle aligned animated selection list" ng-if="queuedUploads">
+    <div id="upload-queue-upload" class="item" ng-repeat="upload in queuedUploads" ng-class="{'selected': selectedUpload.id === upload.id}" ng-click="selectUpload(upload)">
+      <div class="ui grid">
+
+        <div class="ten wide column">
+          <div class="ui grey horizontal label" ng-if="upload.status === 'queued'">Queued</div>
+          <div class="ui violet horizontal label" ng-if="upload.status === 'transcoding'">Transcoding...</div>
+          <div class="ui blue horizontal label" ng-if="upload.status === 'uploading'">Uploading...</div>
+          <div class="ui green horizontal label" ng-if="upload.status === 'finished'"><i class="check icon"></i> Finished</div>
+          <div class="ui red horizontal label" ng-if="upload.status === 'cancelled'">Cancelled</div>
+
+          <span class="upload-queue-paths">
+            {{upload.localPath}}
+            <i class="arrow right icon"></i>
+            {{"/".join(upload.folder.path) + upload.name}}
+          </span>
+        </div>
+
+        <div class="six wide column">
+          <div class="ui active violet progress upload-queue-progress-bar" ng-if="upload.status === 'transcoding'">
+            <div id="upload-full-bar" class="bar"></div>
+          </div>
+          <div class="ui active indicating progress upload-queue-progress-bar" id="upload-{{upload.id}}" ng-if="upload.status === 'uploading'">
+            <div class="bar">
+              <div class="progress>"></div>
+            </div>
+          </div>
+
+          <div class="ui red right floated mini button" ng-if="upload.status === 'queued'" ng-click="cancelUpload(upload)">Cancel</div>
+          <div class="ui red right floated mini button" ng-if="upload.status === 'transcoding'" ng-click="abortUpload(upload)">Abort</div>
+          <div class="ui red right floated mini button" ng-if="upload.status === 'finished'" ng-click="clearUpload(upload)">Clear</div>
+          <div class="ui right floated mini buttons" ng-if="upload.status === 'uploading'">
+            <div class="ui yellow button" ng-if="!upload.paused" ng-click="pauseUpload(upload)">Pause</div>
+            <div class="ui yellow button" ng-if="upload.paused" ng-click="resumeUpload(upload)">Resume</div>
+            <div class="ui red button" ng-click="cancelUpload(upload)">Abort</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="upload-queue-empty" class="ui center aligned icon header" ng-if="!queuedUploads">
+    <i class="cloud upload icon"></i>
+    <div class="content">
+      Drag and Drop Videos or Folders Here to Upload Them
+    </div>
+  </div>
+
+</div>

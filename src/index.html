@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" ng-app="sushistream-uploader">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SushiStream Uploader</title>
+  <link href="http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+  <link href="libs/semantic/semantic.min.css" rel="stylesheet" type="text/css">
+  <link href="sushistream.min.css" rel="stylesheet" type="text/css">
+</head>
+
+<body ng-controller="bodyCtrl">
+
+  <div class="main-container">
+    <div ui-view></div>
+  </div>
+
+</body>
+
+<!-- This line fixes imports not being imported globally in Electron  -->
+<!--<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>-->
+<!--<script src="libs/jquery.min.js"></script>-->
+<script>window.$ = window.jQuery = require('./libs/jquery.min.js');</script>
+<script src="libs/angular.min.js"></script>
+<script src="libs/angular-cookies.min.js"></script>
+<script src="libs/angular-ui-router.min.js"></script>
+<script src="libs/semantic/semantic.min.js"></script>
+<script src="libs/aws-sdk.min.js"></script>
+<script src="libs/electangular.js"></script>
+<script src="sushistream.min.js"></script>
+<script src="http://localhost:35000/livereload.js"></script>
+
+</html>

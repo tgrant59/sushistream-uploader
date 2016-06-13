@@ -1,0 +1,80 @@
+.login-background {
+  background-color: $orange;
+  background-size: cover;
+  bottom: 0;
+  left: 0;
+  overflow-x: hidden;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 9000;
+
+  >.image {
+    bottom: 0;
+    left: 0;
+    overflow-x: hidden;
+    position: fixed;
+    right: 0;
+    text-align: center;
+    top: 0;
+
+    // A trick to vertically center the child
+    &:before {
+      content: '';
+      display: inline-block;
+      height: 100%;
+      margin-right: -.25em;  // Adjusts for spacing
+      vertical-align: middle;
+    }
+  }
+}
+
+#login-container {
+  background-color: $white-transparent !important;
+  display: inline-block;
+  margin-bottom: 10px !important;
+  margin-top: 100px !important;
+  position: relative;
+  text-align: left;
+  transition: margin-top .5s ease-in-out;
+  vertical-align: middle;
+
+  &.hidden {
+    margin-top: 300% !important;
+  }
+
+  .login-header {
+    color: $white;
+    font-size: 40px;
+    font-weight: 700;
+    left: 0;
+    line-height: 40px;
+    position: absolute;
+    right: 0;
+    text-align: center;
+    text-transform: uppercase;
+    top: -90px;
+  }
+
+  .login-forgot {
+    color: $link-blue;
+    cursor: pointer;
+    float: right;
+    font-size: 12px;
+    font-weight: 400;
+    margin-top: -24px;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  #login-signup-button {
+    margin-left: 115px;
+    width: calc(100% - 115px);
+  }
+}
+
+#login-no-account {
+  padding-top: 22px;
+}

@@ -1,0 +1,69 @@
+#video-explorer {
+  border-radius: 0;
+  height: 100%;
+  margin-bottom: 0;
+  padding-right: 0;
+  position: relative;
+}
+
+#video-explorer-label {
+  border-radius: 0 !important;
+}
+
+#video-explorer-list {
+  margin-top: 18px !important;
+  height: calc(100% - 3px);
+  overflow-y: scroll;
+}
+
+.browse-breadcrumbs {
+  display: inline;
+}
+
+#breadcrumb.last {
+  color: $black;
+  cursor: default;
+}
+
+#browse-loader {
+  margin-top: 100px;
+}
+
+#refresh-icon {
+  float: right;
+  margin-right: 0;
+}
+
+.video-name {
+  width: 100%;
+}
+
+#video-context-menu,
+#folder-context-menu,
+#generic-context-menu {
+  position: absolute;
+}
+
+#video-upload-header {
+  margin-top: 0;
+}
+
+.progress-bar {
+  margin-bottom: 0 !important;
+}
+
+#progress-full {
+  width: 100%;
+}
+
+.wider-input {
+  width: 300px;
+}
+
+#upload-button {
+  transition: background-color 3s;
+}
+
+.upload-folder {
+  color: $grey;
+}

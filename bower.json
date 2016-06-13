@@ -1,0 +1,19 @@
+{
+  "name": "sushistream-uploader",
+  "authors": [
+    "Tom Grant <t.grant@outlook.com>"
+  ],
+  "description": "",
+  "main": "",
+  "license": "None",
+  "homepage": "sushistream.co",
+  "private": true,
+  "devDependencies": {
+    "angular": "^1.5.6",
+    "jquery": "^2.2.4",
+    "angular-cookies": "^1.5.6",
+    "angular-ui-router": "^0.3.1",
+    "semantic": "^2.1.8",
+    "aws-sdk": "^2.3.17"
+  }
+}

@@ -1,0 +1,41 @@
+<div class="upload-info-background">
+  <div ng-if="selectedUpload">
+    <div class="ui header upload-info-white">{{selectedUpload.name | videoFolderName}}</div>
+    <p>Local: {{selectedUpload.localPath}}</p>
+    <p>Path: {{"/" + "/".join(selectedUpload.folder.path) | videoFolderName}}</p>
+    <p>Size: {{selectedUpload.file.size | bytes}}</p>
+    <p>Format: {{selectedUpload.file.format | videoFormat}}</p>
+
+    <div class="ui form">
+      <div class="field">
+        <label class="upload-info-white">Change name</label>
+        <div class="ui action input">
+          <input type="text" placeholder="New Name">
+          <div class="ui submit button" ng-click="changeName()" ng-class="{'loading': nameChangeLoading}">Submit</div>
+        </div>
+      </div>
+      <div class="ui error message"></div>
+      <div class="ui red message" ng-if="loginFormError">
+        <p ng-if="loginPasswordIncorrect">Sorry, wrong password. Try again</p>
+      </div>
+    </div>
+
+    <div class="ui fluid button" ng-click="changeFolder()">Change upload path to current folder</div>
+    <div id="upload-info-divider" class="ui hidden divider"></div>
+    <div class="ui red fluid button" ng-if="selectedUpload.status === 'queued'" ng-click="cancelUpload(selectedUpload)">Cancel</div>
+    <div class="ui red fluid button" ng-if="selectedUpload.status === 'transcoding'" ng-click="abortUpload(selectedUpload)">Abort</div>
+    <div class="ui red fluid button" ng-if="selectedUpload.status === 'finished'" ng-click="clearUpload(selectedUpload)">Clear</div>
+    <div class="ui fluid buttons" ng-if="selectedUpload.status === 'uploading'">
+      <div class="ui yellow button" ng-if="!selectedUpload.paused" ng-click="pauseUpload(selectedUpload)">Pause</div>
+      <div class="ui yellow button" ng-if="selectedUpload.paused" ng-click="resumeUpload(selectedUpload)">Resume</div>
+      <div class="ui red button" ng-click="cancelUpload(selectedUpload)">Abort</div>
+    </div>
+  </div>
+
+  <div id="upload-info-empty" class="ui center aligned icon header" ng-if="!selectedUpload">
+    <i class="upload icon"></i>
+    <div class="content">
+      Select an Upload to Edit
+    </div>
+  </div>
+</div>

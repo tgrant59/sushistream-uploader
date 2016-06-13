@@ -1,0 +1,211 @@
+<div id="video-explorer" class="ui segment" ng-if="folder">
+  <div id="video-explorer-label" class="ui top attached label">
+    <div class="ui breadcrumb">
+      <div class="section"><i class="home link icon" ng-click="navToPath([])"></i></div>
+      <div class="browse-breadcrumbs" ng-repeat="folderName in folder.path">
+        <i class="right angle icon divider"></i>
+        <a id="breadcrumb" class="section" ng-class="{ 'last': $last }" ng-click="navToPath(folder.path.slice(0, $index + 1))">{{folderName | videoFolderName}}</a>
+      </div>
+    </div>
+    <i id="refresh-icon" class="refresh icon link" ng-click="loadBaseFolder()" ng-class="{ 'loading disabled': loadingFolder }"></i>
+  </div>
+
+  <div id="video-explorer-list" class="ui middle aligned animated selection list" ss-right-click="openGenericContextMenu($event)">
+    <div class="item" ng-repeat="folderName in folder.folder_list | orderBy:'+'" ng-click="navToPath(folder.folders[folderName].path)" ss-right-click="openFolderContextMenu(folder.folders[folderName], $event)">
+      <i class="circular orange inverted folder icon"></i>
+      <div class="content video-name">
+        {{folder.folders[folderName].name | videoFolderName}}
+        <span class="right floated" ng-if="folder.folders[folderName].path === clippedFolder.path">Cut <i class="cut icon"></i></span>
+      </div>
+    </div>
+    <div class="item" ng-repeat="video in folder.videos | orderBy:'name'" ss-right-click="openVideoContextMenu(video, $event)">
+      <i class="circular orange film icon"></i>
+      <div class="content video-name">
+        {{video.name | videoFolderName}}
+        <span class="right floated" ng-if="video.key === nowPlayingKey">Now Playing <i class="play icon"></i></span>
+        <span class="right floated" ng-if="video.key === clippedVideo.key">Cut <i class="cut icon"></i></span>
+      </div>
+    </div>
+    <p ng-if="folder.folder_list.length === 0 && folder.videos.length === 0">Folder is Empty</p>
+  </div>
+</div>
+
+<div id="video-context-menu" class="ui dropdown">
+  <div class="menu">
+    <div class="item" ng-click="openVideoRenameModal()">Rename</div>
+    <div class="item" ng-click="openVideoDeleteModal()">Delete</div>
+    <div class="item" ng-click="cutVideo()">Cut</div>
+    <div class="item" ng-click="paste()" ng-if="clippedVideo || clippedFolder">Paste</div>
+    <div class="item" ng-click="openFolderCreateModal()">Create new folder</div>
+  </div>
+</div>
+<div id="folder-context-menu" class="ui dropdown">
+  <div class="menu">
+    <div class="item" ng-click="openFolderRenameModal()">Rename</div>
+    <div class="item" ng-click="openFolderDeleteModal()">Delete</div>
+    <div class="item" ng-click="cutFolder()">Cut</div>
+    <div class="item" ng-click="paste()" ng-if="clippedVideo || clippedFolder">Paste</div>
+    <div class="item" ng-click="openFolderCreateModal()">Create new folder</div>
+  </div>
+</div>
+<div id="generic-context-menu" class="ui dropdown">
+  <div class="menu">
+    <div class="item" ng-click="paste()" ng-if="clippedVideo || clippedFolder">Paste</div>
+    <div class="item" ng-click="openFolderCreateModal()">Create new folder</div>
+  </div>
+</div>
+
+<!-- ============== Hidden elements - Dropdowns, Modals, Loaders, etc. ============== -->
+
+<!-- ------- Video Interactions ------- -->
+<div id="video-rename-modal" class="ui basic modal">
+  <div class="ui icon header">
+    <i class="edit icon"></i>
+    Rename <em>{{videoToModify.name | videoFolderName}}</em>?
+  </div>
+  <div class="content centered">
+    <p>Enter a new name for your video</p>
+    <div class="ui input">
+      <input type="text" class="wider-input" placeholder="Video Name" ng-model="videoNewName" ss-enter="renameVideo(videoToModify, videoNewName)" maxlength="256">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui red basic inverted cancel button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+    <div class="ui green inverted approve button" ng-class="{ 'loading': renamingVideo }" ng-click="renameVideo(videoToModify, videoNewName)">
+      <i class="edit icon"></i>
+      Rename
+    </div>
+  </div>
+  <div class="ui negative message" ng-if="renameVideoError">
+    <div class="header">Uh oh, something went wrong</div>
+  </div>
+  <div class="ui negative message" ng-if="renameVideoInvalidLength">
+    <div class="header">Please enter a new name for your video</div>
+  </div>
+</div>
+
+<div id="video-delete-modal" class="ui basic modal">
+  <div class="ui icon header">
+    <i class="trash outline icon"></i>
+    Delete <em>{{videoToModify.name | videoFolderName}}</em>?
+  </div>
+  <div class="content centered">Are you sure you want to delete this video? This <em>cannot</em> be undone.</div>
+  <div class="actions">
+    <div class="ui basic inverted cancel button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+    <div class="ui red inverted approve button" ng-class="{ 'loading': deletingVideo }" ng-click="deleteVideo(videoToModify)">
+      <i class="trash icon"></i>
+      Delete
+    </div>
+  </div>
+  <div class="ui negative message" ng-if="deleteVideoError">
+    <div class="header">Uh oh, something went wrong</div>
+  </div>
+</div>
+
+<!-- ------- Folder Interactions ------- -->
+<div id="folder-rename-modal" class="ui basic modal">
+  <div class="ui icon header">
+    <i class="edit icon"></i>
+    Rename <em>{{folderToModify.name | videoFolderName}}</em>?
+  </div>
+  <div class="content centered">
+    <p>Enter a new name for your folder</p>
+    <div class="ui input">
+      <input type="text" class="wider-input" placeholder="Folder Name" ng-model="folderNewName" ss-enter="renameFolder(folderToModify, folderNewName)" maxlength="256">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui red basic inverted cancel button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+    <div class="ui green inverted approve button" ng-class="{ 'loading': renamingFolder }" ng-click="renameFolder(folderToModify, folderNewName)">
+      <i class="edit icon"></i>
+      Rename
+    </div>
+  </div>
+  <div class="ui negative message" ng-if="renameFolderError">
+    <div class="header">Uh oh, something went wrong</div>
+  </div>
+  <div class="ui negative message" ng-if="renameFolderInvalidLength">
+    <div class="header">Please enter a new name for your folder</div>
+  </div>
+</div>
+
+<div id="folder-create-modal" class="ui basic modal">
+  <div class="ui icon header">
+    <i class="folder open outline icon"></i>
+    Create a new Folder
+  </div>
+  <div class="content centered">
+    <p>Enter a name for your new folder</p>
+    <div class="ui input">
+      <input type="text" class="wider-input" placeholder="Folder Name" ng-model="newFolderName" ss-enter="createFolder(newFolderName)" maxlength="256">
+    </div>
+  </div>
+  <div class="actions">
+    <div class="ui red basic inverted cancel button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+    <div class="ui green inverted approve button" ng-class="{ 'loading': creatingFolder }" ng-click="createFolder(newFolderName)">
+      <i class="plus icon"></i>
+      Create
+    </div>
+  </div>
+  <div class="ui negative message" ng-if="createFolderError">
+    <div class="header">Uh oh, something went wrong</div>
+  </div>
+  <div class="ui negative message" ng-if="createFolderInvalidLength">
+    <div class="header">Please enter a name for your new folder</div>
+  </div>
+</div>
+
+<div id="folder-delete-modal" class="ui basic modal">
+  <div class="ui icon header">
+    <i class="trash outline icon"></i>
+    Delete <em>{{folderToModify.name | videoFolderName}}</em>?
+  </div>
+  <div class="content centered">Are you sure you want to delete this folder and everything in it? This <em>cannot</em> be undone.</div>
+  <div class="actions">
+    <div class="ui basic inverted cancel button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+    <div class="ui red inverted approve button" ng-class="{ 'loading': deletingFolder }" ng-click="deleteFolder(folderToModify)">
+      <i class="trash icon"></i>
+      Delete
+    </div>
+  </div>
+  <div class="ui negative message" ng-if="deleteFolderError">
+    <div class="header">Uh oh, something went wrong</div>
+  </div>
+</div>
+
+<!-- ------- Folder Interactions ------- -->
+<div id="move-modal" class="ui basic modal">
+  <div class="ui icon header">
+    <i class="paste icon"></i>
+    Moving <em>{{clippedName | videoFolderName}}</em> to <em>{{clippedDestination | videoFolderName}}</em>...
+  </div>
+  <div class="ui large loader" ng-if="moving"></div>
+  <div class="ui negative message" ng-if="movingError">
+    <div class="header">Uh oh, something went wrong</div>
+    <div class="ui basic inverted cancel button">
+      <i class="remove icon"></i>
+      Cancel
+    </div>
+  </div>
+</div>
+
+<div id="browse-loader" class="ui large active text loader" ng-if="!folder && !error">Loading Videos...</div>
+<h3 class="ui centered icon header" ng-if="!folder && error">
+  <i class="remove circle icon"></i>
+  Error Loading Videos
+</h3>
