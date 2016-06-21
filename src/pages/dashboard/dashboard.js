@@ -4,6 +4,6 @@ var app = angular.module("dashboardModule", [
   "uploadQueueModule"
 ]);
 
-app.controller("dashboardCtrl", function(){
- 
+app.controller("dashboardCtrl", function($rootScope){
+  
 });

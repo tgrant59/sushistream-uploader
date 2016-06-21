@@ -4,11 +4,14 @@ var app = angular.module("globalsModule", [
   "ssRightClickDirectiveModule",
   // Filters
   "bytesFilterModule",
+  "etaFilterModule",
+  "filePathFolderFilterModule",
   "videoFolderNameFilterModule",
   "videoFormatFilterModule",
   // Services
   "csrfServiceModule",
   "helpersServiceModule",
+  "transcodeServiceModule",
   "uploadServiceModule",
   "userServiceModule"
 ]);

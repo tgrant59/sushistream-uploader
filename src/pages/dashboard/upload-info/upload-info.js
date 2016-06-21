@@ -8,10 +8,85 @@ app.directive("uploadInfo", function(){
   };
 });
 
-app.controller("uploadInfoCtrl", function($scope, uploadService){
+app.controller("uploadInfoCtrl", function($scope, $rootScope, $http, uploadService, transcodeService, constants, config){
   $scope.cancelUpload = uploadService.cancelUpload;
   $scope.abortUpload = uploadService.abortUpload;
-  $scope.clearUpload = uploadService.clearUpload;
   $scope.pauseUpload = uploadService.pauseUpload;
   $scope.resumeUpload = uploadService.resumeUpload;
+  $scope.abortTranscoding = transcodeService.abortTranscoding;
+  $scope.changeName = changeName;
+  $scope.updateFolder = updateFolder;
+  // Form Validation
+  var nameChangeForm = $("#name-change-form");
+  nameChangeForm.form({
+    fields: {
+      newName: ["empty", "maxLength[256]"]
+    }
+  });
+  
+  ////////////////
+  
+  function changeName() {
+    $scope.nameChangeError = false;
+    if (nameChangeForm.form("is valid")) {
+      $scope.nameChangeLoading = true;
+      var fields = nameChangeForm.form("get values");
+      if ($rootScope.selectedUpload.status !== constants.statuses.uploading) {
+        $rootScope.selectedUpload.name = fields.newName;
+        $scope.nameChangeLoading = false;
+      } else {
+        var selectedUploadId = $rootScope.selectedUpload.id;
+        var params = {
+          path: $rootScope.selectedUpload.folder.path,
+          key: $rootScope.selectedUpload.key,
+          new_name: fields.newName
+        };
+        $http.put(config.apiUrl + "/v1/video", params)
+          .success(function(){
+            $rootScope.$broadcast("refresh-folder-structure");
+            for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
+              if ($rootScope.queuedUploads[i].id == selectedUploadId) {
+                $rootScope.queuedUploads[i].name = fields.newName;
+              }
+            }
+            nameChangeForm.form("reset");
+          }).error(function(){
+            $scope.nameChangeError = true;
+          }).finally(function(){
+            $scope.nameChangeLoading = false;
+          });
+      }
+    }
+  }
+
+  function updateFolder() {
+    $scope.updateFolderError = false;
+    $scope.updateFolderLoading = true;
+    if ($rootScope.selectedUpload.status !== constants.statuses.uploading) {
+      $rootScope.selectedUpload.folder = $rootScope.folder;
+      $scope.updateFolderLoading = false;
+    } else {
+      var selectedUploadId = $rootScope.selectedUpload.id;
+      var newFolder = $rootScope.folder;
+      var params = {
+        path: $rootScope.selectedUpload.folder.path,
+        key: $rootScope.selectedUpload.key,
+        newPath: $rootScope.folder.path
+      };
+      $http.post(config.apiUrl + "/v1/video/move", params)
+        .success(function(){
+          $rootScope.$broadcast("refresh-folder-structure");
+          for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
+            if ($rootScope.queuedUploads[i].id == selectedUploadId) {
+              $rootScope.queuedUploads[i].folder = newFolder;
+            }
+          }
+        }).error(function(){
+          $scope.updateFolderError = true;
+        }).finally(function(){
+          $scope.updateFolderLoading = false;
+        });
+    }
+  }
+  
 });

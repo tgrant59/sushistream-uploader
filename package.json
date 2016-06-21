@@ -33,5 +33,12 @@
     "jshint": "^2.9.2",
     "jshint-stylish": "^2.2.0",
     "postcss-flexibility": "^1.0.3"
+  },
+  "dependencies": {
+    "file-tail": "^0.3.0",
+    "fs-extra": "^0.30.0",
+    "get-folder-size": "^1.0.0",
+    "gulp-exec": "^2.1.2",
+    "superagent": "^2.0.0"
   }
 }

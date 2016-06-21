@@ -71,6 +71,9 @@ function authenticated(roles, notLoggedIn){
         if (user.role === constants.roles.unverified) {
           $location.url("/unverified");
         }
+        else if (user.role === constants.roles.unpaid) {
+          $location.url("/subscribe");
+        }
         // if you should not be seeing this page when logged in, redirect to homepage
         else if (notLoggedIn){
           $location.url("/");

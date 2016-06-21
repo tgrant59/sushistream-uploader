@@ -8,62 +8,21 @@ app.directive("uploadQueue", function(){
   };
 });
 
-app.controller("uploadQueueCtrl", function($scope, $rootScope, $timeout, constants, helpersService, uploadService, videoFolderNameReverseFilter){
+app.controller("uploadQueueCtrl", function($scope, $rootScope, $timeout, $interval, constants, helpersService, uploadService, transcodeService, videoFolderNameReverseFilter){
   $scope.cancelUpload = uploadService.cancelUpload;
   $scope.abortUpload = uploadService.abortUpload;
   $scope.pauseUpload = uploadService.pauseUpload;
   $scope.resumeUpload = uploadService.resumeUpload;
+  $scope.abortTranscoding = transcodeService.abortTranscoding;
   $scope.selectUpload = selectUpload;
   $rootScope.queuedUploads = [];
+  $interval(startTranscoding, 1000);
 
-  // $timeout(function(){
-  //   $rootScope.queuedUploads = [
-  //     {id: helpersService.getRandomString(), localPath: "/Users/tom/Videos/Homevid_1", folder: $rootScope.folder,
-  //       name: "Jaime and Cersei", status: "transcoding"},
-  //     {id: helpersService.getRandomString(), localPath: "/Users/tom/Videos/Homevid/hella/basf/aiusehfow84h/sdgsdg4", folder: $rootScope.folder,
-  //       name: "Abe Lincoln", status: "queued"}
-  //   ];
-  // }, 100);
-
-  ////////
+  ////////////////
 
   function selectUpload(upload){
     $rootScope.selectedUpload = upload;
   }
-
-  function updateUploadProgress(upload, progress) {
-    $("#upload-" + upload.id).progress({
-      value: progress
-    });
-  }
-
-  // $timeout(function(){
-  //   $scope.queuedUploads[0].status = "uploading";
-  //   $scope.queuedUploads[1].status = "transcoding";
-  //   updateUploadProgress($scope.queuedUploads[0], 3);
-  // }, 3000);
-  // $timeout(function(){
-  //   updateUploadProgress($scope.queuedUploads[0], 15);
-  // }, 5000);
-  // $timeout(function(){
-  //   updateUploadProgress($scope.queuedUploads[0], 27);
-  // }, 7000);
-  // $timeout(function(){
-  //   updateUploadProgress($scope.queuedUploads[0], 45);
-  // }, 10000);
-  // $timeout(function(){
-  //   updateUploadProgress($scope.queuedUploads[0], 54);
-  // }, 12000);
-  // $timeout(function(){
-  //   updateUploadProgress($scope.queuedUploads[0], 75);
-  // }, 13000);
-  // $timeout(function(){
-  //   updateUploadProgress($scope.queuedUploads[0], 94);
-  // }, 15000);
-  // $timeout(function(){
-  //   $scope.queuedUploads[0].status = "finished";
-  //   updateUploadProgress($scope.queuedUploads[0], 100);
-  // }, 18000);
 
   // --------------- Drag and Drop ----------------
   var html = $("body");
@@ -97,8 +56,9 @@ app.controller("uploadQueueCtrl", function($scope, $rootScope, $timeout, constan
   }
 
   function nameIsDuplicate(name, folder) {
-    for (var i = 0; i < folder.videos.length; i++) {
-      if (name === folder.videos[i].name) {
+    var allVideos = folder.videos.concat($rootScope.queuedUploads);
+    for (var i = 0; i < allVideos.length; i++) {
+      if (name === allVideos[i].name) {
         return true;
       }
     }
@@ -108,25 +68,42 @@ app.controller("uploadQueueCtrl", function($scope, $rootScope, $timeout, constan
   function dropFile(event){
     dragEnd(event);
     var uploadFiles = event.originalEvent.dataTransfer.files;
-    console.log(uploadFiles);
     for (var i = 0; i < uploadFiles.length; i++) {
       if (constants.regex.videoFormats.test(uploadFiles[i].name)) {
         var dotIndex = uploadFiles[i].name.lastIndexOf(".");
-        var slashIndex = uploadFiles[i].name.lastIndexOf("/");
         var name = videoFolderNameReverseFilter(uploadFiles[i].name.substring(0, dotIndex));
-        while (nameIsDuplicate(name, $rootScope.folder)) {
+        // For first duplication, add (1) to end of name
+        if (nameIsDuplicate(name, $rootScope.folder)) {
           name = name + " (1)";
+        }
+        // For subsequent duplications, increment number
+        var j = 2;
+        while (nameIsDuplicate(name, $rootScope.folder)) {
+          name = name.slice(0, -3) + "(" + j.toString() + ")";
+          j++;
         }
         $rootScope.queuedUploads.push({
           id: helpersService.getRandomString(),
           name: name,
           folder: $rootScope.folder,
-          status: "queued",
-          localPath: uploadFiles[i].name.slice(0, slashIndex),
+          status: constants.statuses.queued,
           file: uploadFiles[i]
         });
       }
     }
   }
 
+  function startTranscoding() {
+    var i = 0;
+    while (i < $rootScope.queuedUploads.length) {
+      if ($rootScope.queuedUploads[i].status === constants.statuses.transcoding) {
+        break;
+      } else if ($rootScope.queuedUploads[i].status === constants.statuses.queued) {
+        transcodeService.startTranscoding($rootScope.queuedUploads[i]);
+        break;
+      }
+      i++;
+    }
+  }
+  
 });

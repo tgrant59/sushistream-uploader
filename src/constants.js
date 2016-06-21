@@ -16,5 +16,14 @@ app.constant("constants", {
   },
   regex: {
     videoFormats: /[^\s]+\.(webm|mkv|flv|ogg|ogv|avi|mov|qt|wmv|rm|rmvb|asf|mp4|m4v|mpg|mpeg|mp2|mpe|mpv|m2v|3gp|3g2)$/
+  },
+  statuses: {
+    queued: "queued",
+    queuedUpload: "queuedUpload",
+    transcoding: "transcoding",
+    uploading: "uploading",
+    finished: "finished",
+    aborted: "aborted",
+    error: "error"
   }
 });

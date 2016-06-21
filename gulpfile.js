@@ -7,7 +7,7 @@ var watch = require("gulp-watch");
 var webserver = require("gulp-webserver");
 var gulpUtil = require("gulp-util");
 var livereload = require("gulp-livereload");
-var run = require("gulp-run");
+var child_process = require("child_process");
 // JS Stuff
 var jshint = require("gulp-jshint");
 var stylish = require("jshint-stylish");
@@ -99,25 +99,36 @@ gulp.task("distribute-html", ["clean-html"], function() {
 
 gulp.task("distribute-third-party", ["clean-third-party"], function() {
   return gulp.src(thirdPartyLibsGlob)
-    .pipe(gulp.dest("dist/libs"))
+    .pipe(gulp.dest("dist/libs"));
 });
 
 gulp.task("distribute-images", ["clean-images"], function() {
   return gulp.src(imageGlob)
-    .pipe(gulp.dest("dist/img"))
+    .pipe(gulp.dest("dist/img"));
 });
 
-gulp.task("reload-electron", function() {
+gulp.task("reload-contents", function() {
   return gulp.src(distGlob)
-    .pipe(livereload())
+    .pipe(livereload());
+});
+
+var electron;
+gulp.task("reload-electron", function(){
+  if (electron) {
+    electron.kill();
+  }
+  electron = child_process.spawn(__dirname + "/node_modules/electron-prebuilt/dist/Electron.app/Contents/MacOS/Electron", ["."]);
+  electron.stdout.on('data', function(data) {
+    console.log("Electron: " + data);
+});
 });
 
 gulp.task("watch", ["distribute-js", "distribute-scss", "distribute-html", "distribute-third-party", "distribute-images"], function() {
+  gulp.start("reload-electron");
   livereload.listen({
     port: 35000,
     quiet: true
   });
-  run("electron .").exec();
   watch(jsGlob, function() {
     gulp.start("distribute-js");
   });
@@ -134,8 +145,11 @@ gulp.task("watch", ["distribute-js", "distribute-scss", "distribute-html", "dist
     gulp.start("distribute-images");
   });
   watch(distGlob, function(){
-    gulp.start("reload-electron")
+    gulp.start("reload-contents");
   });
+  watch("main.js", function(){
+    gulp.start("reload-electron");
+  })
 });
 
 // gulp.task("serve", , function(){

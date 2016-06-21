@@ -29,3 +29,19 @@ app.filter("videoFolderNameReverse", function(constants){
     }
   }
 });
+
+app.filter("uploadNewFolderName", function() {
+  return uploadNewFolderNameFilter;
+  
+  ///////////
+  
+  function uploadNewFolderNameFilter(upload){
+    var path = upload.folder.path.join("/");
+    if (path) {
+      return path + "/" + upload.name;
+    } else {
+      return upload.name;
+    }
+  }
+  
+});

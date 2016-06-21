@@ -1,9 +1,10 @@
 var app = angular.module("userServiceModule", []);
 
-app.factory("userService", function($q, $http, $rootScope, $location, $cookies, config){
+app.factory("userService", function($q, $http, $rootScope, $state, $location, $cookies, config, constants){
   return {
     initUser: initUser, 
-    logout: logout
+    logout: logout,
+    sendToRightPage: sendToRightPage
   };
   
   //////////
@@ -29,6 +30,18 @@ app.factory("userService", function($q, $http, $rootScope, $location, $cookies, 
         $cookies.remove("session-id");
         $location.url("/login");
       });
+  }
+  
+  function sendToRightPage() {
+    if (!$rootScope.user) {
+      $state.go("login");
+    } else if ($rootScope.user.role === constants.roles.unverified) {
+      $state.go("unverified");
+    } else if ($rootScope.user.role === constants.roles.unpaid) {
+      $state.go("subscribe");
+    } else {
+      $state.go("dashboard");
+    }
   }
   
 });

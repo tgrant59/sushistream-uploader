@@ -1,6 +1,6 @@
 var app = angular.module("loginModule", []);
 
-app.controller("loginCtrl", function($scope, $rootScope, $http, $location, $stateParams, electron, config, userService){
+app.controller("loginCtrl", function($scope, $rootScope, $http, $location, $state, $stateParams, electron, config, constants, userService){
   // Functions
   $scope.loginFormSubmit = loginFormSubmit;
   $scope.openExternalLogin = openExternalLogin;
@@ -31,12 +31,15 @@ app.controller("loginCtrl", function($scope, $rootScope, $http, $location, $stat
       $http.post(config.apiUrl + "/v1/auth/login", payload)
         .success(function(){
           $rootScope.user = undefined;  // Needed to reset the user to an unknown login state
-          userService.initUser();
-          if ($stateParams.next) {
-            $location.url($stateParams.next).replace();
-          } else {
-            $state.go("videos", {}, {location: "replace"});
-          }
+          userService.initUser()
+            .then(function(){
+              if ($rootScope.user.role === constants.roles.unverified) {
+                $state.go("unverified");
+              } else if ($rootScope.user.role === constants.roles.unpaid) {
+                $state.go("subscribe");
+              }
+              $state.go("dashboard");
+            });
         }).error(function(data, status){
           $scope.loginFormError = true;
           if (status === 401){

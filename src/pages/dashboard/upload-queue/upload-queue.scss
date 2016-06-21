@@ -24,6 +24,10 @@
   }
 }
 
+.upload-grid {
+  width: calc(100% + 20px);
+}
+
 .upload-queue-paths {
   line-height: 20px;
   margin-bottom: 5px;
@@ -40,14 +44,17 @@
   display: inline-flex;
 }
 
+.upload-queue-eta {
+  display: inline-block;
+  font-size: 12px;
+  padding-top: 4px;
+  vertical-align: top;
+}
+
 .upload-queue-progress-bar {
   display: inline-block !important;
   margin: 0 10px !important;
-  width: calc(100% - 144px);
-}
-
-#upload-full-bar {
-  width: 100%;
+  width: calc(100% - 162px);
 }
 
 #upload-queue-empty {

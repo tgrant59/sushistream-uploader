@@ -1,23 +1,34 @@
 #video-explorer {
   border-radius: 0;
+  display: flex;
+  flex-flow: column;
   height: 100%;
   margin-bottom: 0;
-  padding-right: 0;
+  padding: 0 !important;
   position: relative;
 }
 
 #video-explorer-label {
   border-radius: 0 !important;
+  padding-bottom: 3px;
+  position: relative;
 }
 
 #video-explorer-list {
-  margin-top: 18px !important;
-  height: calc(100% - 3px);
+  flex: 1 1 auto;
+  margin-top: 10px !important;
   overflow-y: scroll;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .browse-breadcrumbs {
-  display: inline;
+  display: inline-block;
+  margin-bottom: 6px !important;
+}
+
+.browse-breadcrumbs-home {
+  padding-bottom: 7px !important;
 }
 
 #breadcrumb.last {
@@ -25,8 +36,18 @@
   cursor: default;
 }
 
+.folder-structure-size-remaining {
+  float: right;
+}
+
+.folder-structure-size-progress {
+  display: inline-block !important;
+  margin: 0 !important;
+  width: calc(100% - 80px);
+}
+
 #browse-loader {
-  margin-top: 100px;
+  //margin-top: 100px;
 }
 
 #refresh-icon {

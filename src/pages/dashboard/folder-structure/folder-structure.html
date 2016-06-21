@@ -1,13 +1,29 @@
 <div id="video-explorer" class="ui segment" ng-if="folder">
   <div id="video-explorer-label" class="ui top attached label">
-    <div class="ui breadcrumb">
-      <div class="section"><i class="home link icon" ng-click="navToPath([])"></i></div>
-      <div class="browse-breadcrumbs" ng-repeat="folderName in folder.path">
-        <i class="right angle icon divider"></i>
-        <a id="breadcrumb" class="section" ng-class="{ 'last': $last }" ng-click="navToPath(folder.path.slice(0, $index + 1))">{{folderName | videoFolderName}}</a>
+    <div class="ui grid">
+
+      <div class="ten wide column">
+        <div class="ui breadcrumb">
+          <div class="section browse-breadcrumbs-home"><i class="home link icon" ng-click="navToPath([])"></i></div>
+          <div class="browse-breadcrumbs" ng-repeat="folderName in folder.path">
+            <i class="right angle icon divider"></i>
+            <a id="breadcrumb" class="section" ng-class="{ 'last': $last }" ng-click="navToPath(folder.path.slice(0, $index + 1))">{{folderName | videoFolderName}}</a>
+          </div>
+        </div>
       </div>
+
+      <div class="five wide column">
+        <div class="ui small indicating progress folder-structure-size-progress" id="size-remaining-progress">
+          <div class="bar"></div>
+        </div>
+        <span class="folder-structure-size-remaining">{{sizeRemaining | bytes}} free</span>
+      </div>
+
+      <div class="one wide column">
+        <i id="refresh-icon" class="refresh icon link" ng-click="loadBaseFolder()" ng-class="{ 'loading disabled': loadingFolder }"></i>
+      </div>
+
     </div>
-    <i id="refresh-icon" class="refresh icon link" ng-click="loadBaseFolder()" ng-class="{ 'loading disabled': loadingFolder }"></i>
   </div>
 
   <div id="video-explorer-list" class="ui middle aligned animated selection list" ss-right-click="openGenericContextMenu($event)">
@@ -15,15 +31,19 @@
       <i class="circular orange inverted folder icon"></i>
       <div class="content video-name">
         {{folder.folders[folderName].name | videoFolderName}}
+        <span class="right floated" ng-if="folder.size">{{folder.folders[folderName].size | bytes}}</span>
         <span class="right floated" ng-if="folder.folders[folderName].path === clippedFolder.path">Cut <i class="cut icon"></i></span>
       </div>
     </div>
     <div class="item" ng-repeat="video in folder.videos | orderBy:'name'" ss-right-click="openVideoContextMenu(video, $event)">
-      <i class="circular orange film icon"></i>
+      <i class="circular orange film icon" ng-if="!video.upload"></i>
+      <i class="circular gray film icon" ng-if="video.upload"></i>
       <div class="content video-name">
         {{video.name | videoFolderName}}
+        <span class="right floated" ng-if="video.size">{{video.size | bytes}}</span>
         <span class="right floated" ng-if="video.key === nowPlayingKey">Now Playing <i class="play icon"></i></span>
         <span class="right floated" ng-if="video.key === clippedVideo.key">Cut <i class="cut icon"></i></span>
+        <span class="right floated" ng-if="video.upload">Uploading...</span>
       </div>
     </div>
     <p ng-if="folder.folder_list.length === 0 && folder.videos.length === 0">Folder is Empty</p>
@@ -85,6 +105,9 @@
   <div class="ui negative message" ng-if="renameVideoInvalidLength">
     <div class="header">Please enter a new name for your video</div>
   </div>
+  <div class="ui negative message" ng-if="renameVideoNameExists">
+    <div class="header">That name is already taken!</div>
+  </div>
 </div>
 
 <div id="video-delete-modal" class="ui basic modal">
@@ -136,6 +159,9 @@
   <div class="ui negative message" ng-if="renameFolderInvalidLength">
     <div class="header">Please enter a new name for your folder</div>
   </div>
+  <div class="ui negative message" ng-if="renameFolderNameExists">
+    <div class="header">That name is already taken!</div>
+  </div>
 </div>
 
 <div id="folder-create-modal" class="ui basic modal">
@@ -165,6 +191,9 @@
   <div class="ui negative message" ng-if="createFolderInvalidLength">
     <div class="header">Please enter a name for your new folder</div>
   </div>
+  <div class="ui negative message" ng-if="createFolderNameExists">
+    <div class="header">That name is already taken!</div>
+  </div>
 </div>
 
 <div id="folder-delete-modal" class="ui basic modal">
@@ -188,18 +217,20 @@
   </div>
 </div>
 
-<!-- ------- Folder Interactions ------- -->
-<div id="move-modal" class="ui basic modal">
+<!-- ------- Moving Interactions ------- -->
+<div id="move-error-modal" class="ui basic modal">
   <div class="ui icon header">
     <i class="paste icon"></i>
-    Moving <em>{{clippedName | videoFolderName}}</em> to <em>{{clippedDestination | videoFolderName}}</em>...
+    Error moving <em>{{clippedName | videoFolderName}}</em> to <em>{{clippedDestination}}</em>
   </div>
-  <div class="ui large loader" ng-if="moving"></div>
-  <div class="ui negative message" ng-if="movingError">
-    <div class="header">Uh oh, something went wrong</div>
-    <div class="ui basic inverted cancel button">
+  <div class="ui negative message">
+    <div class="header" ng-if="movingUnspecifiedError">Uh oh, something went wrong</div>
+    <div class="header" ng-if="movingNameExists">A video/folder of that name already exists in the folder you want to paste to. Rename the offender before trying again</div>
+  </div>
+  <div class="actions">
+    <div class="ui red inverted cancel button">
       <i class="remove icon"></i>
-      Cancel
+      Back
     </div>
   </div>
 </div>

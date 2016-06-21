@@ -24,3 +24,12 @@ $link-blue: #0645ad;
 .centered {
   text-align: center;
 }
+
+.orange-background {
+  background-color: $orange;
+  bottom: 0;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+}

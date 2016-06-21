@@ -7,7 +7,6 @@ app.filter("videoFormat", function() {
   
   function videoFormatFilter(format) {
     if (format) {
-      console.log(format);
       return format.split("/")[1];
     }
   }

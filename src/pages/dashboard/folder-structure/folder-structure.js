@@ -15,7 +15,7 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
   var folderRenameModal;
   var folderCreateModal;
   var folderDeleteModal;
-  var moveModal;
+  var moveErrorModal;
   $timeout(function(){
     videoRenameModal = $("#video-rename-modal");
     videoRenameModal.modal({onApprove: function(){return false;}});
@@ -27,8 +27,8 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
     folderCreateModal.modal({onApprove: function(){return false;}});
     folderDeleteModal = $("#folder-delete-modal");
     folderDeleteModal.modal({onApprove: function(){return false;}});
-    moveModal = $("#move-modal");
-    moveModal.modal({onApprove: function(){return false;}});
+    moveErrorModal = $("#move-error-modal");
+    moveErrorModal.modal({onApprove: function(){return false;}});
   });
 
 
@@ -38,6 +38,9 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
   $interval(function(){
     loadBaseFolder();
   }, constants.timing.folderStructureRefreshInterval);
+  $scope.$on("refresh-folder-structure", function(){
+    loadBaseFolder();
+  });
 
   // Init scope functions
   // $scope.playVideo = playerService.playVideo;
@@ -72,6 +75,13 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
     $http.get(config.apiUrl + "/v1/folder")
       .success(function(data){
         baseFolder = JSON.parse(data.folder);
+        $scope.sizeRemaining = config.stripePlans[$rootScope.user.settings.account.plan].maxSize - baseFolder.size;
+        var percentSizeRemaining = ($scope.sizeRemaining / config.stripePlans[$rootScope.user.settings.account.plan].maxSize) * 100;
+        $timeout(function(){
+          $("#size-remaining-progress").progress({
+            value: percentSizeRemaining
+          });
+        });
         var path;
         if ($rootScope.folder) {
           path = $rootScope.folder.path;
@@ -104,6 +114,30 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
     } catch(err) {
       $rootScope.folder = baseFolder;
     }
+  }
+
+  function videoNameIsDuplicate(videoName, folderToCheck) {
+    if (folderToCheck === undefined) {
+      folderToCheck = $rootScope.folder;
+    }
+    for (var i = 0; i < folderToCheck.videos.length; i++) {
+      if (videoName === folderToCheck.videos[i].name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function folderNameIsDuplicate(folderName, folderToCheck) {
+    if (folderToCheck === undefined) {
+      folderToCheck = $rootScope.folder;
+    }
+    for (var i = 0; i < folderToCheck.folder_list.length; i++) {
+      if (folderName === folderToCheck.folder_list[i]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // -------------- Context Menus --------------
@@ -175,6 +209,9 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
     if (newName.length === 0 || newName.length > 256) {
       $scope.renameVideoInvalidLength = true;
       return;
+    } else if (videoNameIsDuplicate(newName)) {
+      $scope.renameVideoNameExists = true;
+      return;
     }
     $scope.renameVideoInvalidLength = false;
     $scope.renameVideoError = false;
@@ -218,8 +255,14 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
   }
 
   function moveVideo(video, newPath) {
-    $scope.moveError = false;
-    $scope.moving = true;
+    $scope.movingUnspecifiedError = false;
+    $scope.movingNameExists = false;
+    var newFolder = _followPath(baseFolder, newPath);
+    if (videoNameIsDuplicate(video.name, newFolder)) {
+      $scope.movingNameExists = true;
+      moveErrorModal.modal("show");
+      return;
+    }
     var params = {
       path: $scope.clippedPath,
       key: video.key,
@@ -227,14 +270,9 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
     };
     $http.post(config.apiUrl + "/v1/video/move", params)
       .success(function(){
-        loadBaseFolder()
-          .then(function(){
-            moveModal.modal("hide");
-          });
+        loadBaseFolder();
       }).error(function(){
-        $scope.moveError = true;
-      }).finally(function(){
-        $scope.moving = false;
+        $scope.movingUnspecifiedError = true;
       });
   }
 
@@ -242,6 +280,9 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
   function createFolder(name) {
     if (name.length === 0 || name.length > 256) {
       $scope.createFolderInvalidLength = true;
+      return;
+    } else if (folderNameIsDuplicate(name)) {
+      $scope.createFolderNameExists = true;
       return;
     }
     $scope.createFolderInvalidLength = false;
@@ -267,6 +308,9 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
   function renameFolder(folder, newName) {
     if (newName.length === 0 || newName.length > 256) {
       $scope.renameFolderInvalidLength = true;
+      return;
+    } else if (folderNameIsDuplicate(newName)) {
+      $scope.renameFolderNameExists = true;
       return;
     }
     $scope.renameFolderInvalidLength = false;
@@ -303,6 +347,17 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
           .then(function(){
             folderDeleteModal.modal("hide");
           });
+        // Adjust uploads in case their upload folder was deleted
+        for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
+          var upload = $rootScope.queuedUploads[i];
+          if ((upload.status === constants.statuses.queued ||
+              upload.status === constants.statuses.queuedUpload ||
+              upload.status === constants.statuses.uploading ||
+              upload.status === constants.statuses.transcoding) &&
+              upload.folder == folder) {
+            upload.folder = $rootScope.folder;
+          }
+        }
       }).error(function(){
         $scope.deleteFolderError = true;
       }).finally(function(){
@@ -310,10 +365,15 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
       });
   }
 
-  function
-  moveFolder(folder, newPath) {
-    $scope.moveError = false;
-    $scope.moving = true;
+  function moveFolder(folder, newPath) {
+    $scope.movingUnspecifiedError = false;
+    $scope.movingNameExists = false;
+    var newFolder = _followPath(baseFolder, newPath);
+    if (folderNameIsDuplicate(folder.name, newFolder)) {
+      $scope.movingNameExists = true;
+      moveErrorModal.modal("show");
+      return;
+    }
     var params = {
       path: $scope.clippedPath,
       name: folder.name,
@@ -321,14 +381,9 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
     };
     $http.post(config.apiUrl + "/v1/folder/move", params)
       .success(function(){
-        loadBaseFolder()
-          .then(function(){
-            moveModal.modal("hide");
-          });
+        loadBaseFolder();
       }).error(function(){
-        $scope.moveError = true;
-      }).finally(function(){
-        $scope.moving = false;
+        $scope.movingUnspecifiedError = true;
       });
   }
 
@@ -346,7 +401,7 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
   }
 
   function paste() {
-    $scope.clippedDestination = $rootScope.folder.path.length > 0 ? $rootScope.folder.path[-1] : "Home";
+    $scope.clippedDestination = $rootScope.folder.path.length > 0 ? $rootScope.folder.path[$rootScope.folder.path.length - 1] : "Home";
     if ($scope.clippedVideo) {
       $scope.clippedName = $scope.clippedVideo.name + " (video)";
       moveVideo($scope.clippedVideo, $rootScope.folder.path);
