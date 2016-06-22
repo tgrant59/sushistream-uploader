@@ -27,6 +27,7 @@ var scssGlob = "src/**/*.scss";
 var htmlGlob = "src/**/*.html";
 var thirdPartyLibsGlob = "libs/**/*";
 var imageGlob = "img/**/*";
+var binGlob = "bin/**/*";
 var distGlob = "dist/**/*";
 
 
@@ -105,6 +106,11 @@ gulp.task("distribute-third-party", ["clean-third-party"], function() {
 gulp.task("distribute-images", ["clean-images"], function() {
   return gulp.src(imageGlob)
     .pipe(gulp.dest("dist/img"));
+});
+
+gulp.task("distribute-bin", function() {
+  return gulp.src(binGlob)
+    .pipe(gulp.dest("dist/bin"));
 });
 
 gulp.task("reload-contents", function() {
@@ -194,4 +200,4 @@ gulp.task("watch", ["distribute-js", "distribute-scss", "distribute-html", "dist
 // });
 
 gulp.task("default", ["watch"]);
-gulp.task("build", ["distribute-js", "distribute-scss", "distribute-html", "distribute-third-party", "distribute-images"]);
+gulp.task("build", ["distribute-js", "distribute-scss", "distribute-html", "distribute-third-party", "distribute-images", "distribute-bin"]);
