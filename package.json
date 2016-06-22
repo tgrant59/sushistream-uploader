@@ -1,22 +1,23 @@
 {
-  "name": "sushistream-uploader",
+  "name": "SushiStream Uploader",
   "version": "1.0.0",
-  "description": "",
+  "description": "The cross-platform Desktop Uploader for SushiStream",
   "main": "main.js",
   "scripts": {
     "start": "./node_modules/.bin/electron .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Tom Grant <tom@sushistream.co>",
   "license": "UNLICENSED",
+  "private": true,
   "devDependencies": {
     "autoprefixer": "^6.3.6",
     "cssnano": "^3.6.2",
     "del": "^2.2.0",
-    "electron-prebuilt": "^1.2.1",
     "gulp": "^3.9.1",
     "gulp-cached": "^1.1.0",
     "gulp-concat": "^2.6.0",
+    "gulp-exec": "^2.1.2",
     "gulp-insert": "^0.5.0",
     "gulp-jshint": "^2.0.1",
     "gulp-livereload": "^3.8.1",
@@ -35,10 +36,10 @@
     "postcss-flexibility": "^1.0.3"
   },
   "dependencies": {
+    "electron-prebuilt": "^1.2.1",
     "file-tail": "^0.3.0",
     "fs-extra": "^0.30.0",
     "get-folder-size": "^1.0.0",
-    "gulp-exec": "^2.1.2",
     "superagent": "^2.0.0"
   }
 }
