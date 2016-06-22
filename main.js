@@ -205,8 +205,8 @@ var transcoder;
 var transcoderVideoId;
 var tail;
 
-fs.removeSync(transcodingDir);
-fs.removeSync(uploadDir);
+fs.removeSync(__dirname + "/tmp");
+fs.mkdirSync(__dirname + "/tmp");
 fs.mkdirSync(uploadDir);
 
 
