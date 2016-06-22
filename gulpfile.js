@@ -194,3 +194,4 @@ gulp.task("watch", ["distribute-js", "distribute-scss", "distribute-html", "dist
 // });
 
 gulp.task("default", ["watch"]);
+gulp.task("build", ["distribute-js", "distribute-scss", "distribute-html", "distribute-third-party", "distribute-images"]);

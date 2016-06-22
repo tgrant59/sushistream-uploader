@@ -22,7 +22,7 @@ function createWindow() {
   });
 
   // and load the index.html of the app.
-  win.loadURL(encodeURIComponent(`file://${__dirname}/dist/index.html`));
+  win.loadURL(`file://${__dirname}/dist/index.html`);
 
   // Open the DevTools.
   win.webContents.openDevTools();
