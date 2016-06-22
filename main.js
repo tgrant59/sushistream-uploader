@@ -5,6 +5,7 @@ const child_process = require('child_process');
 const fs = require("fs-extra");
 const fileTail = require("file-tail");
 const request = require("superagent");
+const config = require("./config");
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -22,10 +23,12 @@ function createWindow() {
   });
 
   // and load the index.html of the app.
-  win.loadURL(`file://${__dirname}/dist/index.html`);
+  win.loadURL(config.indexPath);
 
   // Open the DevTools.
-  win.webContents.openDevTools();
+  if (config.openDevTools) {
+    win.webContents.openDevTools();
+  }
 
   // Emitted when the window is closed.
   win.on('closed', () => {
@@ -83,7 +86,7 @@ let menuTemplate = [{
   label: "Account",
   submenu: [{
     label: "Modify Account Settings",
-    click() { shell.openExternal("https://app.sushistream.co/account/profile"); }
+    click() { shell.openExternal(config.externalAppUrl + "/account/profile"); }
   }, {
     label: "Logout",
     click() {
@@ -117,10 +120,10 @@ let menuTemplate = [{
   role: "help",
   submenu: [{
     label: "Give us Feedback",
-    click() { shell.openExternal("https://app.sushistream.co/feedback"); }
+    click() { shell.openExternal(config.externalAppUrl + "/feedback"); }
   }, {
     label: 'Learn More',
-    click() { shell.openExternal("https://sushistream.co"); }
+    click() { shell.openExternal(config.externalSiteUrl); }
   }]
 }];
 
@@ -196,17 +199,17 @@ const ffprobe = `"${__dirname}/bin/ffprobe" -i "%s" -v error -select_streams v:0
 const ffmpeg = `${__dirname}/bin/ffmpeg`;
 const ffmpegParamsPre = ['-i'];
 const ffmpegParamsPost =  ['-acodec', 'aac', '-hls_list_size', '0', '-hls_time',
-  '5', '-hls_segment_filename', `${__dirname}/tmp/transcoding/%05d.ts`, `${__dirname}/tmp/transcoding/index.m3u8`,
-  '-progress', `${__dirname}/tmp/transcoding/progress.log`];
-var transcodingDir = __dirname + "/tmp/transcoding/";
-var uploadDir = __dirname + "/tmp/upload/";
+  '5', '-hls_segment_filename', `${config.tmpDir}/transcoding/%05d.ts`, `${config.tmpDir}/transcoding/index.m3u8`,
+  '-progress', `${config.tmpDir}/transcoding/progress.log`];
+var transcodingDir = config.tmpDir + "/transcoding/";
+var uploadDir = config.tmpDir + "/upload/";
 var logfile = transcodingDir + "progress.log";
 var transcoder;
 var transcoderVideoId;
 var tail;
 
-fs.removeSync(__dirname + "/tmp");
-fs.mkdirSync(__dirname + "/tmp");
+fs.removeSync(config.tmpDir);
+fs.mkdirSync(config.tmpDir);
 fs.mkdirSync(uploadDir);
 
 
