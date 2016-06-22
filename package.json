@@ -1,5 +1,5 @@
 {
-  "name": "SushiStream Uploader",
+  "name": "sushistream-uploader",
   "version": "1.0.0",
   "description": "The cross-platform Desktop Uploader for SushiStream",
   "main": "main.js",
