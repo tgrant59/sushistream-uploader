@@ -42,6 +42,10 @@
 
 .upload-queue-progress {
   display: inline-flex;
+
+  .progress .bar {
+    font-size: 11px;
+  }
 }
 
 .upload-queue-eta {

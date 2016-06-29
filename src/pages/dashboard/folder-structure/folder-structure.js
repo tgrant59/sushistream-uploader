@@ -8,7 +8,7 @@ app.directive("folderStructure", function(){
   };
 });
 
-app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $timeout, $interval, constants, config){
+app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $timeout, $interval, electron, constants, config, userService){
   // Init Modals
   var videoRenameModal;
   var videoDeleteModal;
@@ -62,6 +62,8 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
   $scope.cutVideo = cutVideo;
   $scope.cutFolder = cutFolder;
   $scope.paste = paste;
+  $scope.openPlans = openPlans;
+  $scope.initUser = userService.initUser;
 
   /////////////////
 
@@ -411,6 +413,11 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
     }
     $scope.clippedVideo = null;
     $scope.clippedFolder = null;
+  }
+  
+  // -------------- External Links --------------
+  function openPlans() {
+    electron.shell.openExternal(config.externalUrl + "/account/subscription");
   }
 
 });

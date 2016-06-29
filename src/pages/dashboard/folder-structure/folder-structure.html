@@ -20,7 +20,7 @@
       </div>
 
       <div class="one wide column">
-        <i id="refresh-icon" class="refresh icon link" ng-click="loadBaseFolder()" ng-class="{ 'loading disabled': loadingFolder }"></i>
+        <i id="refresh-icon" class="refresh icon link" ng-click="loadBaseFolder(); initUser()" ng-class="{ 'loading disabled': loadingFolder }"></i>
       </div>
 
     </div>
@@ -232,6 +232,18 @@
       <i class="remove icon"></i>
       Back
     </div>
+  </div>
+</div>
+
+<!-- Other Modals -->
+<div id="no-space-left-modal" class="ui modal">
+  <div class="ui icon header">
+    <i class="frown icon"></i>
+    Out of Space!
+  </div>
+  <div class="content centered">You have run out of space for videos! Upgrade your plan to get more space immediately</div>
+  <div class="content centered">
+    <div class="ui big green button" ng-click="openPlans()">Check out our Plans</div>
   </div>
 </div>
 

@@ -4,8 +4,7 @@
   "description": "The cross-platform Desktop Uploader for SushiStream",
   "main": "main.js",
   "scripts": {
-    "start": "./node_modules/.bin/electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "./node_modules/.bin/electron ."
   },
   "author": "Tom Grant <tom@sushistream.co>",
   "license": "UNLICENSED",

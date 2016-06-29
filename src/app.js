@@ -43,6 +43,9 @@ app.run(function($rootScope, config, constants, userService, transcodeService, u
       case "uploading-error":
         uploadService.receiveUploadError(msg.msg);
         break;
+      case "uploading-abort":
+        uploadService.receiveUploadAbort();
+        break;
       case "logout":
         userService.logout();
         break;

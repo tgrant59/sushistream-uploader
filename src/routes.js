@@ -54,6 +54,8 @@ var authInterceptor = function($q, $location, $rootScope) {
         } else {
           $rootScope.user = null;
         }
+      } else if (rejection.status == 403) {
+        $location.url("/");
       }
       return $q.reject(rejection);
     }
