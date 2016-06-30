@@ -88,7 +88,6 @@ function createWindow() {
       }
       transcoder = null;
       transcoderVideoId = null;
-      tail = null;
       setTimeout(function(){
         win.destroy();
       }, 500);
