@@ -7,9 +7,47 @@ const fileTail = require("file-tail");
 const request = require("superagent");
 const config = require("./config");
 
+// Transcoding variables
+const ffprobe = __dirname + "/bin/ffprobe";
+const ffprobeParamsPre = ["-i"];
+const ffprobeParamsPost = ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=nb_frames", "-of",
+  "default=nokey=1:noprint_wrappers=1"];
+const ffmpeg = __dirname + "/bin/ffmpeg";
+const ffmpegParamsPre = ["-i"];
+const ffmpegParamsPost =  ["-acodec", "aac", "-hls_list_size", "0", "-hls_time",
+  "5", "-hls_segment_filename", `${config.tmpDir}/transcoding/%05d.ts`, `${config.tmpDir}/transcoding/index.m3u8`,
+  "-progress", `${config.tmpDir}/transcoding/progress.log`];
+var transcodingDir = config.tmpDir + "/transcoding/";
+var uploadDir = config.tmpDir + "/upload/";
+var logfile = transcodingDir + "progress.log";
+var transcoder;
+var transcoderVideoId;
+var tail;
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
+
+function appInit() {
+  createWindow();
+  // Browser object communication controller
+  electron.ipcMain.on("electron-msg", (event, msg) => {
+    switch (msg.event) {
+      case "transcoding-frames":
+        getVideoFrames(msg.msg);
+        break;
+      case "transcoding-start":
+        startTranscoding(msg.msg);
+        break;
+      case "transcoding-abort":
+        abortTranscoding(msg.msg);
+        break;
+      case "upload-shard":
+        uploadShard(msg.msg);
+        break;
+    }
+  });
+}
 
 function createWindow() {
   // Set the Menu
@@ -32,19 +70,29 @@ function createWindow() {
 
   // Confirm on closing
   win.on("close", function(e) {
+    e.preventDefault();
     var choice = dialog.showMessageBox(win, {
         type: "question",
         buttons: ["Yes", "No"],
         title: "Confirm",
         message: "Are you sure you want to quit? Any transcoding or uploading jobs will be cancelled."
       });
-    if (choice !== 0) {
-      e.preventDefault();
-    } else {
+    if (choice === 0) {
       win.webContents.send("electron-msg", {
         event: "uploading-abort",
         msg: {}
       });
+    } else {
+      if (transcoder) {
+        tail.stop();
+        transcoder.kill();
+      }
+      transcoder = null;
+      transcoderVideoId = null;
+      tail = null;
+      setTimeout(function(){
+        win.emit("close");
+      }, 500);
     };
   });
 
@@ -56,30 +104,12 @@ function createWindow() {
     win = null;
   });
 
-  // Browser object communication controller
-  electron.ipcMain.on("electron-msg", (event, msg) => {
-    switch (msg.event) {
-      case "transcoding-frames":
-        getVideoFrames(msg.msg);
-        break;
-      case "transcoding-start":
-        startTranscoding(msg.msg);
-        break;
-      case "transcoding-abort":
-        abortTranscoding(msg.msg);
-        break;
-      case "upload-shard":
-        uploadShard(msg.msg);
-        break;
-    }
-  });
-
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on("ready", createWindow);
+app.on("ready", appInit);
 
 // Quit when all windows are closed.
 app.on("window-all-closed", () => {
@@ -218,22 +248,6 @@ const menu = Menu.buildFromTemplate(menuTemplate);
 ////////// Event Handlers //////////
 
 // ------ Transcoding Functions ------
-const ffprobe = __dirname + "/bin/ffprobe";
-const ffprobeParamsPre = ["-i"];
-const ffprobeParamsPost = ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=nb_frames", "-of",
-  "default=nokey=1:noprint_wrappers=1"];
-const ffmpeg = __dirname + "/bin/ffmpeg";
-const ffmpegParamsPre = ["-i"];
-const ffmpegParamsPost =  ["-acodec", "aac", "-hls_list_size", "0", "-hls_time",
-  "5", "-hls_segment_filename", `${config.tmpDir}/transcoding/%05d.ts`, `${config.tmpDir}/transcoding/index.m3u8`,
-  "-progress", `${config.tmpDir}/transcoding/progress.log`];
-var transcodingDir = config.tmpDir + "/transcoding/";
-var uploadDir = config.tmpDir + "/upload/";
-var logfile = transcodingDir + "progress.log";
-var transcoder;
-var transcoderVideoId;
-var tail;
-
 fs.removeSync(config.tmpDir);
 fs.mkdirSync(config.tmpDir);
 fs.mkdirSync(uploadDir);
@@ -251,10 +265,12 @@ function getVideoFrames(video) {
     } else {
       msg.frames = parseInt(stdout);
     }
-    win.webContents.send("electron-msg", {
-      event: "transcoding-frames",
-      msg: msg
-    });
+    if (win) {
+      win.webContents.send("electron-msg", {
+        event: "transcoding-frames",
+        msg: msg
+      });
+    }
   });
 }
 
@@ -275,21 +291,25 @@ function startTranscoding(video) {
   tail.on("line", function (line) {
     lineList = line.split("=");
     if (lineList[0] === "frame") {
-      win.webContents.send("electron-msg", {
-        event: "transcoding-progress-frames",
-        msg: {
-          id: video.id,
-          frames: parseInt(lineList[1])
-        }
-      });
+      if (win) {
+        win.webContents.send("electron-msg", {
+          event: "transcoding-progress-frames",
+          msg: {
+            id: video.id,
+            frames: parseInt(lineList[1])
+          }
+        });
+      }
     } else if (lineList[0] === "fps") {
-      win.webContents.send("electron-msg", {
-        event: "transcoding-progress-fps",
-        msg: {
-          id: video.id,
-          fps: parseFloat(lineList[1])
-        }
-      });
+      if (win) {
+        win.webContents.send("electron-msg", {
+          event: "transcoding-progress-fps",
+          msg: {
+            id: video.id,
+            fps: parseFloat(lineList[1])
+          }
+        });
+      }
     }
   });
   tail.on("tailError", function(err) {
@@ -304,10 +324,12 @@ function startTranscoding(video) {
     if (err) {
       console.log(err);
       fs.removeSync(transcodingDir);
-      win.webContents.send("electron-msg", {
-        event: "transcoding-error",
-        msg: {id: video.id, err: err}
-      });
+      if (win) {
+        win.webContents.send("electron-msg", {
+          event: "transcoding-error",
+          msg: {id: video.id, err: err}
+        });
+      }
     } else {
       fs.removeSync(logfile);
       var newUploadDir = uploadDir + video.id + "/"
@@ -319,20 +341,24 @@ function startTranscoding(video) {
           for (var i = 0; i < files.length; i++) {
             folderSize = folderSize + fs.statSync(newUploadDir + files[i]).size;
           }
-          win.webContents.send("electron-msg", {
-            event: "transcoding-finished",
-            msg: {
-              id: video.id,
-              shardsToUpload: files,
-              size: folderSize
-            }
-          });
+          if (win) {
+            win.webContents.send("electron-msg", {
+              event: "transcoding-finished",
+              msg: {
+                id: video.id,
+                shardsToUpload: files,
+                size: folderSize
+              }
+            });
+          }
         } else {
           console.log(err);
-          win.webContents.send("electron-msg", {
-            event: "transcoding-error",
-            msg: {id: video.id}
-          });
+          if (win) {
+            win.webContents.send("electron-msg", {
+              event: "transcoding-error",
+              msg: {id: video.id}
+            });
+          }
         }
       });
     }
@@ -364,30 +390,36 @@ function uploadShard(msg) {
         if (err) {
           console.log("uploading err: ", err);
           fs.removeSync(uploadDir + msg.id);
-          win.webContents.send("electron-msg", {
-            event: "uploading-error",
-            msg: {
-              id: msg.id
-            }
-          });
+          if (win) {
+            win.webContents.send("electron-msg", {
+              event: "uploading-error",
+              msg: {
+                id: msg.id
+              }
+            });
+          }
         } else {
-          win.webContents.send("electron-msg", {
-            event: "uploading-success",
-            msg: {
-              id: msg.id,
-              filename: msg.file
-            }
-          })
+          if (win) {
+            win.webContents.send("electron-msg", {
+              event: "uploading-success",
+              msg: {
+                id: msg.id,
+                filename: msg.file
+              }
+            });
+          }
         }
       });
   } catch (err) {
     console.log("uploading err: ", err);
     fs.removeSync(uploadDir + msg.id);
-    win.webContents.send("electron-msg", {
-      event: "uploading-error",
-      msg: {
-        id: msg.id
-      }
-    });
+    if (win) {
+      win.webContents.send("electron-msg", {
+        event: "uploading-error",
+        msg: {
+          id: msg.id
+        }
+      });
+    }
   }
 }
