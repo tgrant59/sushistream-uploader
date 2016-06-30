@@ -1,6 +1,6 @@
 var app = angular.module("userServiceModule", []);
 
-app.factory("userService", function($q, $http, $rootScope, $state, $location, $cookies, config, constants){
+app.factory("userService", function($q, $http, $rootScope, $state, $location, $cookies, config, constants, uploadService, transcodeService){
   return {
     initUser: initUser, 
     logout: logout,
@@ -23,6 +23,8 @@ app.factory("userService", function($q, $http, $rootScope, $state, $location, $c
   }
   
   function logout(){
+    uploadService.receiveUploadAbortAll();
+    transcodeService.receiveTranscodingAbortAll();
     $rootScope.user = null;
     $http.get(config.apiUrl + "/v1/auth/logout")
       .finally(function(){

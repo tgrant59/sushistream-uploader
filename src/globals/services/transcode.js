@@ -7,7 +7,9 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
     updateTranscodingFrames: updateTranscodingFrames,
     updateTranscodingProgressFrames: updateTranscodingProgressFrames,
     updateTranscodingProgressFps: updateTranscodingProgressFps,
-    receiveTranscodingError: receiveTranscodingError
+    receiveTranscodingError: receiveTranscodingError,
+    receiveTranscodingAbort: receiveTranscodingAbort,
+    receiveTranscodingAbortAll: receiveTranscodingAbortAll
   };
 
   ///////////////
@@ -100,6 +102,14 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
     for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
       if ($rootScope.queuedUploads[i].id == msg.id) {
         $rootScope.queuedUploads[i].status = constants.statuses.aborted;
+      }
+    }
+  }
+  
+  function receiveTranscodingAbortAll() {
+    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
+      if ($rootScope.queuedUploads[i].status === constants.statuses.transcoding) {
+        abortTranscoding($rootScope.queuedUploads[i]);
       }
     }
   }

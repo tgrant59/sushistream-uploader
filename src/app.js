@@ -37,6 +37,9 @@ app.run(function($rootScope, config, constants, userService, transcodeService, u
       case "transcoding-error":
         transcodeService.receiveTranscodingError(msg.msg);
         break;
+      case "transcoding-abort":
+        transcodeService.receiveTranscodingAbort(msg.msg);
+        break;
       case "uploading-success":
         uploadService.receiveUploadSuccess(msg.msg);
         break;
@@ -44,7 +47,7 @@ app.run(function($rootScope, config, constants, userService, transcodeService, u
         uploadService.receiveUploadError(msg.msg);
         break;
       case "uploading-abort":
-        uploadService.receiveUploadAbort();
+        uploadService.receiveUploadAbortAll();
         break;
       case "logout":
         userService.logout();

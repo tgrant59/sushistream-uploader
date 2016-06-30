@@ -25,7 +25,7 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
     loadShards: loadShards,
     receiveUploadSuccess: receiveUploadSuccess,
     receiveUploadError: receiveUploadError,
-    receiveUploadAbort: receiveUploadAbort
+    receiveUploadAbortAll: receiveUploadAbortAll
   };
   
   ////////////////
@@ -188,9 +188,11 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
     }
   }
   
-  function receiveUploadAbort() {
+  function receiveUploadAbortAll() {
     for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      abortUpload($rootScope.queuedUploads[i]);
+      if ($rootScope.queuedUploads[i].status === constants.statuses.uploading) {
+        abortUpload($rootScope.queuedUploads[i]);
+      }
     }
   }
   
