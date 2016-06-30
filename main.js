@@ -306,7 +306,7 @@ function startTranscoding(video) {
       fs.removeSync(transcodingDir);
       win.webContents.send("electron-msg", {
         event: "transcoding-error",
-        msg: {id: video.id}
+        msg: {id: video.id, err: err}
       });
     } else {
       fs.removeSync(logfile);
