@@ -31,7 +31,6 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
   ////////////////
   
   function startUpload(video) {
-    console.log(video);
     videoUploading = video;
     video.status = constants.statuses.uploading;
     var params = {
@@ -112,7 +111,6 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
   }
 
   function loadShards(msg) {
-    console.log(msg);
     for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
       if ($rootScope.queuedUploads[i].id == msg.id) {
         delete $rootScope.queuedUploads[i].total_frames;
@@ -147,6 +145,7 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
           shardsUploading.push(video.shardsToUpload[i]);
           var params = {
             key: video.key,
+            path: video.folder.path,
             filename: video.shardsToUpload[i]
           };
           $http.post(config.apiUrl + '/v1/video/upload/auth', params)
@@ -159,6 +158,9 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
                   signedUrl: data.presigned_url_data
                 }
               });
+            }).error(function(){  // jshint ignore:line
+              abortUpload(video);
+              video.status = constants.statuses.error;
             });
           i++;
         }
