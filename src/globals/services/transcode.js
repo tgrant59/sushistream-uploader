@@ -95,5 +95,13 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
       }
     }
   }
+  
+  function receiveTranscodingAbort(msg) {
+    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
+      if ($rootScope.queuedUploads[i].id == msg.id) {
+        $rootScope.queuedUploads[i].status = constants.statuses.aborted;
+      }
+    }
+  }
 
 });

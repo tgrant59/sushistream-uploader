@@ -82,7 +82,6 @@ function createWindow() {
         event: "uploading-abort",
         msg: {}
       });
-    } else {
       if (transcoder) {
         tail.stop();
         transcoder.kill();
@@ -91,9 +90,9 @@ function createWindow() {
       transcoderVideoId = null;
       tail = null;
       setTimeout(function(){
-        win.emit("close");
+        win.destroy();
       }, 500);
-    };
+    }
   });
 
   // Emitted when the window is closed.
@@ -372,6 +371,12 @@ function abortTranscoding(video) {
     tail.stop();
     transcoderVideoId = null;
     fs.removeSync(transcodingDir);
+    if (win) {
+      win.webContents.send("electron-msg", {
+        event: "transcoding-abort",
+        msg: {id: video.id}
+      });
+    }
   }
 }
 
