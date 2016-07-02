@@ -77,13 +77,15 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
     $http.get(config.apiUrl + "/v1/folder")
       .success(function(data){
         baseFolder = JSON.parse(data.folder);
-        $scope.sizeRemaining = config.stripePlans[$rootScope.user.settings.account.plan].maxSize - baseFolder.size;
-        var percentSizeRemaining = ($scope.sizeRemaining / config.stripePlans[$rootScope.user.settings.account.plan].maxSize) * 100;
-        $timeout(function(){
-          $("#size-remaining-progress").progress({
-            value: percentSizeRemaining
+        if ($rootScope.user.role !== constants.roles.unpaid) {
+          $scope.sizeRemaining = config.stripePlans[$rootScope.user.settings.account.plan].maxSize - baseFolder.size;
+          var percentSizeRemaining = ($scope.sizeRemaining / config.stripePlans[$rootScope.user.settings.account.plan].maxSize) * 100;
+          $timeout(function () {
+            $("#size-remaining-progress").progress({
+              value: percentSizeRemaining
+            });
           });
-        });
+        }
         var path;
         if ($rootScope.folder) {
           path = $rootScope.folder.path;

@@ -90,7 +90,6 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
   }
   
   function receiveTranscodingError(msg) {
-    console.log(msg.err);
     for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
       if ($rootScope.queuedUploads[i].id == msg.id) {
         $rootScope.queuedUploads[i].status = constants.statuses.error;
@@ -107,9 +106,11 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
   }
   
   function receiveTranscodingAbortAll() {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].status === constants.statuses.transcoding) {
-        abortTranscoding($rootScope.queuedUploads[i]);
+    if ($rootScope.queuedUploads) {
+      for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
+        if ($rootScope.queuedUploads[i].status === constants.statuses.transcoding) {
+          abortTranscoding($rootScope.queuedUploads[i]);
+        }
       }
     }
   }

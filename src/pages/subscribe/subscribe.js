@@ -1,9 +1,9 @@
 var app = angular.module("subscribeModule", []);
 
 app.controller("subscribeCtrl", function($scope, electron, config, userService){
+  $scope.logout = userService.logout;
   $scope.openExternalSubscribe = openExternalSubscribe;
   $scope.refreshUser = refreshUser;
-  $scope.logout = logout;
 
   //////////
 
@@ -24,8 +24,4 @@ app.controller("subscribeCtrl", function($scope, electron, config, userService){
       });
   }
   
-  function logout() {
-    userService.logout();
-  }
-
 });

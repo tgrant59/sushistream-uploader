@@ -33,12 +33,7 @@ app.controller("loginCtrl", function($scope, $rootScope, $http, $location, $stat
           $rootScope.user = undefined;  // Needed to reset the user to an unknown login state
           userService.initUser()
             .then(function(){
-              if ($rootScope.user.role === constants.roles.unverified) {
-                $state.go("unverified");
-              } else if ($rootScope.user.role === constants.roles.unpaid) {
-                $state.go("subscribe");
-              }
-              $state.go("dashboard");
+              userService.sendToRightPage();
             });
         }).error(function(data, status){
           $scope.loginFormError = true;

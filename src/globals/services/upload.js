@@ -191,9 +191,11 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
   }
   
   function receiveUploadAbortAll() {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].status === constants.statuses.uploading) {
-        abortUpload($rootScope.queuedUploads[i]);
+    if ($rootScope.queuedUploads) {
+      for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
+        if ($rootScope.queuedUploads[i].status === constants.statuses.uploading) {
+          abortUpload($rootScope.queuedUploads[i]);
+        }
       }
     }
   }

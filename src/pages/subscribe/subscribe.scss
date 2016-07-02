@@ -14,15 +14,18 @@
 }
 
 .subscribe-fixed-button {
-  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 20px 30px !important;
   position: absolute;
   top: 0;
 
   &.left {
+    border-radius: 0 0 3px !important;
     left: 0;
   }
 
   &.right {
+    border-radius: 0 0 0 3px !important;
     right: 0;
   }
 }

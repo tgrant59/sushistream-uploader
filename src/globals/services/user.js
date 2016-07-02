@@ -26,6 +26,7 @@ app.factory("userService", function($q, $http, $rootScope, $state, $location, $c
     uploadService.receiveUploadAbortAll();
     transcodeService.receiveTranscodingAbortAll();
     $rootScope.user = null;
+    $rootScope.folder = null;
     $http.get(config.apiUrl + "/v1/auth/logout")
       .finally(function(){
         $cookies.remove("csrf-token");

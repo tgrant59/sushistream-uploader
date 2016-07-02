@@ -1,10 +1,10 @@
 var app = angular.module("unverifiedModule", []);
 
 app.controller("unverifiedCtrl", function($scope, electron, config, userService){
+  $scope.logout = userService.logout;
+  $scope.openExternalVerify = openExternalVerify;
   $scope.refreshUser = refreshUser;
-  $scope.logout = logout;
-  
-  
+
   ////////////
   
   function openExternalVerify() {
@@ -24,8 +24,4 @@ app.controller("unverifiedCtrl", function($scope, electron, config, userService)
       });
   }
   
-  function logout() {
-    userService.logout();
-  }
-
 });
