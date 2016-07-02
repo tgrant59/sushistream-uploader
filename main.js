@@ -23,31 +23,14 @@ var logfile = transcodingDir + "progress.log";
 var transcoder;
 var transcoderVideoId;
 var tail;
+var quit;
 
+// ---------------------------------------------------------------------------------------------------------------------
+//                                                  Window Setup
+// ---------------------------------------------------------------------------------------------------------------------
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
-
-function appInit() {
-  createWindow();
-  // Browser object communication controller
-  electron.ipcMain.on("electron-msg", (event, msg) => {
-    switch (msg.event) {
-      case "transcoding-frames":
-        getVideoFrames(msg.msg);
-        break;
-      case "transcoding-start":
-        startTranscoding(msg.msg);
-        break;
-      case "transcoding-abort":
-        abortTranscoding(msg.msg);
-        break;
-      case "upload-shard":
-        uploadShard(msg.msg);
-        break;
-    }
-  });
-}
 
 function createWindow() {
   // Set the Menu
@@ -71,26 +54,11 @@ function createWindow() {
   // Confirm on closing
   win.on("close", function(e) {
     e.preventDefault();
-    var choice = dialog.showMessageBox(win, {
-        type: "question",
-        buttons: ["Yes", "No"],
-        title: "Confirm",
-        message: "Are you sure you want to quit? Any transcoding or uploading jobs will be cancelled."
-      });
-    if (choice === 0) {
+    if (win) {
       win.webContents.send("electron-msg", {
-        event: "uploading-abort",
+        event: "confirm-close",
         msg: {}
       });
-      if (transcoder) {
-        tail.stop();
-        transcoder.kill();
-      }
-      transcoder = null;
-      transcoderVideoId = null;
-      setTimeout(function(){
-        win.destroy();
-      }, 500);
     }
   });
 
@@ -101,9 +69,48 @@ function createWindow() {
     // when you should delete the corresponding element.
     win = null;
   });
-
 }
 
+function confirmClose(msg) {
+  if (msg.confirmOnClose) {
+    var choice = dialog.showMessageBox(win, {
+      type: "question",
+      buttons: ["Yes", "No"],
+      title: "Confirm",
+      message: "Are you sure you want to quit? Any transcoding or uploading jobs will be cancelled."
+    });
+    if (choice === 0) {
+      destroyWindow();
+    } else {
+      quit = false;
+    }
+  } else {
+    destroyWindow();
+  }
+}
+
+function destroyWindow() {
+  win.webContents.send("electron-msg", {
+    event: "uploading-abort",
+    msg: {}
+  });
+  if (transcoder) {
+    tail.stop();
+    transcoder.kill();
+  }
+  transcoder = null;
+  transcoderVideoId = null;
+  setTimeout(function(){
+    win.destroy();
+    if (quit) {
+      app.quit();
+    }
+  }, 500);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+//                                                  App Setup
+// ---------------------------------------------------------------------------------------------------------------------
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -126,7 +133,37 @@ app.on("activate", () => {
   }
 });
 
-////////// Menu creation //////////
+app.on("before-quit", () => {
+  quit = true;
+});
+
+function appInit() {
+  createWindow();
+  // Browser object communication controller
+  electron.ipcMain.on("electron-msg", (event, msg) => {
+    switch (msg.event) {
+      case "transcoding-frames":
+        getVideoFrames(msg.msg);
+        break;
+      case "transcoding-start":
+        startTranscoding(msg.msg);
+        break;
+      case "transcoding-abort":
+        abortTranscoding(msg.msg);
+        break;
+      case "upload-shard":
+        uploadShard(msg.msg);
+        break;
+      case "confirm-close":
+        confirmClose(msg.msg);
+        break;
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+//                                                  Menu Setup
+// ---------------------------------------------------------------------------------------------------------------------
 
 let menuTemplate = [{
   label: "Account",
@@ -243,9 +280,9 @@ if (process.platform === "darwin") {
 
 const menu = Menu.buildFromTemplate(menuTemplate);
 
-////////// Event Handlers //////////
-
-// ------ Transcoding Functions ------
+// ---------------------------------------------------------------------------------------------------------------------
+//                                                  Transcoding Setup
+// ---------------------------------------------------------------------------------------------------------------------
 fs.removeSync(config.tmpDir);
 fs.mkdirSync(config.tmpDir);
 fs.mkdirSync(uploadDir);
@@ -273,7 +310,6 @@ function getVideoFrames(video) {
 }
 
 function startTranscoding(video) {
-  console.log(video);
   if (transcoder) {
     tail.stop();
     transcoder.kill();
@@ -281,11 +317,14 @@ function startTranscoding(video) {
   transcoderVideoId = video.id;
   fs.removeSync(transcodingDir);
   fs.mkdirSync(transcodingDir);
-  var fd = fs.openSync(logfile, "w");
-  fs.close(fd);
   var ffmpegParams = ffmpegParamsPre.concat([video.path]).concat(ffmpegParamsPost);
-
-  tail = fileTail.startTailing(logfile);
+  try {
+    fs.ensureFileSync(logfile);
+    tail = fileTail.startTailing(logfile);
+  } catch (err) {
+    fs.ensureFileSync(logfile);
+    tail = fileTail.startTailing(logfile);
+  }
   tail.on("line", function (line) {
     lineList = line.split("=");
     if (lineList[0] === "frame") {
@@ -379,9 +418,11 @@ function abortTranscoding(video) {
   }
 }
 
-// ------ Upload functions ------
+// ---------------------------------------------------------------------------------------------------------------------
+//                                                  Upload Setup
+// ---------------------------------------------------------------------------------------------------------------------
 
-function uploadShard(msg) {
+function uploadShard(msg, retry) {
   try {
     request
       .post(msg.signedUrl.url)
@@ -415,15 +456,19 @@ function uploadShard(msg) {
         }
       });
   } catch (err) {
-    console.log("uploading err: ", err);
-    fs.removeSync(uploadDir + msg.id);
-    if (win) {
-      win.webContents.send("electron-msg", {
-        event: "uploading-error",
-        msg: {
-          id: msg.id
-        }
-      });
+    if (retry) {
+      console.log("uploading err: ", err);
+      fs.removeSync(uploadDir + msg.id);
+      if (win) {
+        win.webContents.send("electron-msg", {
+          event: "uploading-error",
+          msg: {
+            id: msg.id
+          }
+        });
+      }
+    } else {
+      uploadShard(msg, true);
     }
   }
 }

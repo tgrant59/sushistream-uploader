@@ -14,7 +14,7 @@ var app = angular.module("sushistream-uploader", [
   "unverifiedModule"
 ]);
 
-app.run(function($rootScope, config, constants, userService, transcodeService, uploadService){
+app.run(function($rootScope, ipc, config, constants, userService, transcodeService, uploadService){
   $rootScope.config = config;
   $rootScope.constants = constants;
   userService.initUser();
@@ -49,9 +49,37 @@ app.run(function($rootScope, config, constants, userService, transcodeService, u
       case "uploading-abort":
         uploadService.receiveUploadAbortAll();
         break;
+      case "confirm-close":
+        confirmOnClose();
+        break;
       case "logout":
         userService.logout();
         break;
     }
   });
+  
+  ///////////
+  
+  function confirmOnClose() {
+    var confirm = false;
+    if ($rootScope.queuedUploads) {
+      for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
+        var upload = $rootScope.queuedUploads[i];
+        if (upload.status === constants.statuses.transcoding || 
+            upload.status === constants.statuses.uploading ||
+            upload.status === constants.statuses.queued ||
+            upload.status === constants.statuses.queuedUpload) {
+          confirm = true;
+          break;
+        }
+      }
+    }
+    ipc.send({
+      event: "confirm-close",
+      msg: {
+        confirmOnClose: confirm
+      }
+    });
+  }
+  
 });
