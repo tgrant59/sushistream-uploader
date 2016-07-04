@@ -62,6 +62,9 @@ app.run(function($rootScope, $state, ipc, config, constants, userService, transc
       case "confirm-close":
         confirmOnClose();
         break;
+      case "log":
+        console.log(msg.msg);
+        break;
       case "logout":
         userService.logout();
         break;

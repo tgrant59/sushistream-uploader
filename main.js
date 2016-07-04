@@ -182,22 +182,27 @@ if (config.crashReporter.start) {
 // ---------------------------------------------------------------------------------------------------------------------
 var manualUpdate;
 if (config.autoUpdater.start) {
-  autoUpdater.setFeedURL(config.autoUpdater.url + app.getVersion());
+  var feedUrl = config.autoUpdater.url + app.getVersion();
+  sendMessage("log", feedUrl);
+  autoUpdater.setFeedURL(feedUrl);
   autoUpdater.checkForUpdates();
 
   app.on("checking-for-update", function(){
+    sendMessage("log", "checking");
     if (manualUpdate) {
       sendMessage("update-checking");
     }
   });
 
   app.on("update-available", function(){
+    sendMessage("log", "found");
     if (manualUpdate) {
       sendMessage("update-found");
     }
   });
 
   app.on("update-not-available", function(){
+    sendMessage("log", "not found");
     if (manualUpdate) {
       sendMessage("update-not-found");
     }
@@ -205,6 +210,7 @@ if (config.autoUpdater.start) {
   });
 
   app.on("update-downloaded", function(){
+    sendMessage("log", "downloaded");
     dialog.showMessageBox(win, {
       type: "warning",
       buttons: ["Update"],
