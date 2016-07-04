@@ -183,7 +183,6 @@ if (config.crashReporter.start) {
 var manualUpdate;
 if (config.autoUpdater.start) {
   var feedUrl = config.autoUpdater.url + app.getVersion();
-  sendMessage("log", feedUrl);
   autoUpdater.setFeedURL(feedUrl);
   autoUpdater.checkForUpdates();
 
@@ -273,8 +272,9 @@ let menuTemplate = [{
   }, {
     label: "Check for Updates",
     click () {
-      if (config.initializeAutoUpdater) {
+      if (config.autoUpdater.start) {
         manualUpdate = true;
+        sendMessage("log", "updating");
         autoUpdater.checkForUpdates();
       }
     }
@@ -292,6 +292,7 @@ if (process.platform === "darwin") {
       click () {
         if (config.autoUpdater.start) {
           manualUpdate = true;
+          sendMessage("log", "updating");
           autoUpdater.checkForUpdates();
         }
       }
