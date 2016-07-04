@@ -67,6 +67,29 @@ app.run(function($rootScope, $state, ipc, config, constants, userService, transc
         break;
     }
   });
+
+  // Initialize Drag and Drop events
+  var html = $("body");
+  html.on("dragenter", function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    $rootScope.$broadcast("dragenter", event);
+  });
+  html.on("dragover", function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    $rootScope.$broadcast("dragover", event);
+  });
+  html.on("dragleave", function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    $rootScope.$broadcast("dragleave", event);
+  });
+  html.on("drop", function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    $rootScope.$broadcast("drop", event);
+  });
   
   ///////////
   

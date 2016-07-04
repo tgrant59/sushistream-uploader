@@ -25,28 +25,14 @@ app.controller("uploadQueueCtrl", function($scope, $rootScope, $timeout, $interv
   }
 
   // --------------- Drag and Drop ----------------
-  var html = $("body");
   var uploadDimmer = $("#upload-dimmer");
   var stopDragOver;
-  html.on("dragenter", dragOver);
-  html.on("dragover", dragOver);
-  html.on("dragleave", dragEnd);
-  html.on("drop", dropFile);
+  $scope.$on("dragenter", dragOver);
+  $scope.$on("dragover", dragOver);
+  $scope.$on("dragleave", dragEnd);
+  $scope.$on("drop", dropFile);
   
-  $scope.$on("$destroy", function(){
-    html.removeEventListener("dragenter");
-    html.removeEventListener("dragover");
-    html.removeEventListener("dragleave");
-    html.removeEventListener("drop");
-  });
-
-  function preventDefault(event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  function dragOver(event){
-    preventDefault(event);
+  function dragOver(_, event){
     uploadDimmer.dimmer("show");
     if (stopDragOver) {
       $timeout.cancel(stopDragOver);
@@ -54,8 +40,7 @@ app.controller("uploadQueueCtrl", function($scope, $rootScope, $timeout, $interv
     }
   }
 
-  function dragEnd(event) {
-    preventDefault(event);
+  function dragEnd(_, event) {
     stopDragOver = $timeout(function(){
       uploadDimmer.dimmer("hide");
       stopDragOver = undefined;
@@ -72,7 +57,7 @@ app.controller("uploadQueueCtrl", function($scope, $rootScope, $timeout, $interv
     return false;
   }
 
-  function dropFile(event){
+  function dropFile(_, event){
     dragEnd(event);
     var uploadFiles = event.originalEvent.dataTransfer.files;
     for (var i = 0; i < uploadFiles.length; i++) {

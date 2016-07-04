@@ -362,7 +362,6 @@ function getVideoFrames(video) {
       id: video.id
     }
     if (err) {
-      console.log(err);
       msg.error = true;
     } else {
       msg.frames = parseInt(stdout);
@@ -385,7 +384,9 @@ function startTranscoding(video) {
     tail = fileTail.startTailing(logfile);
   } catch (err) {
     fs.ensureFileSync(logfile);
-    tail = fileTail.startTailing(logfile);
+    try {
+      tail = fileTail.startTailing(logfile);
+    } catch (err) {}
   }
   tail.on("line", function (line) {
     lineList = line.split("=");
@@ -402,7 +403,6 @@ function startTranscoding(video) {
     }
   });
   tail.on("tailError", function(err) {
-    console.log("tail", err);
     tail.stop();
   });
   
@@ -411,7 +411,6 @@ function startTranscoding(video) {
     transcoder = null;
     transcoderVideoId = null;
     if (err) {
-      console.log(err);
       fs.removeSync(transcodingDir);
       sendMessage("transcoding-error", {
         id: video.id, 
@@ -434,7 +433,6 @@ function startTranscoding(video) {
             size: folderSize
           });
         } else {
-          console.log(err);
           sendMessage("transcoding-error", {
             id: video.id
           });
@@ -472,7 +470,6 @@ function uploadShard(msg, retry) {
       .attach("file", uploadDir + msg.id + "/" + msg.file)
       .end(function (err, res) {
         if (err) {
-          console.log("uploading err: ", err);
           fs.removeSync(uploadDir + msg.id);
           sendMessage("uploading-error", {
             id: msg.id
@@ -486,7 +483,6 @@ function uploadShard(msg, retry) {
       });
   } catch (err) {
     if (retry) {
-      console.log("uploading err: ", err);
       fs.removeSync(uploadDir + msg.id);
       sendMessage("uploading-error", {
         id: msg.id
