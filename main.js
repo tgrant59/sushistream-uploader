@@ -182,7 +182,7 @@ if (config.crashReporter.start) {
 // ---------------------------------------------------------------------------------------------------------------------
 var manualUpdate;
 if (config.autoUpdater.start) {
-  autoUpdater.setFeedURL(config.autoUpdater.url);
+  autoUpdater.setFeedURL(config.autoUpdater.url + app.getVersion());
   autoUpdater.checkForUpdates();
 
   app.on("checking-for-update", function(){
@@ -284,7 +284,7 @@ if (process.platform === "darwin") {
     }, {
       label: "Check for Updates",
       click () {
-        if (config.initializeAutoUpdater) {
+        if (config.autoUpdater.start) {
           manualUpdate = true;
           autoUpdater.checkForUpdates();
         }

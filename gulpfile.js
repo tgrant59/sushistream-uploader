@@ -153,7 +153,7 @@ gulp.task("watch", ["distribute-js", "distribute-scss", "distribute-html", "dist
   watch(distGlob, function(){
     gulp.start("reload-contents");
   });
-  watch("main.js", function(){
+  watch(["main.js", "config.js"], function(){
     gulp.start("reload-electron");
   })
 });

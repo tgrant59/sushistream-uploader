@@ -1,3 +1,6 @@
+const os = require("os");
+var platform = os.platform() + '_' + os.arch();
+
 module.exports = {
   indexPath: "file://" + __dirname + "/dist/index.html",
   tmpDir: __dirname + "/tmp",
@@ -6,7 +9,7 @@ module.exports = {
   externalAppUrl: "http://localhost:7000/#",
   autoUpdater: {
     start: false,
-    url: "https://uploader.sushistream.co"
+    url: "https://uploader.sushistream.co/update/" + platform + "/"
   },
   crashReporter: {
     start: false,
