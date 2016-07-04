@@ -35,11 +35,17 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
   // Init folder structure
   var baseFolder;
   loadBaseFolder();
-  $interval(function(){
+
+  var folderInterval = $interval(function(){
     loadBaseFolder();
   }, constants.timing.folderStructureRefreshInterval);
   $scope.$on("refresh-folder-structure", function(){
     loadBaseFolder();
+  });
+  $scope.$on("$destroy", function(){
+    if (angular.isDefined(folderInterval)) {
+        $interval.cancel(folderInterval);
+    }
   });
 
   // Init scope functions

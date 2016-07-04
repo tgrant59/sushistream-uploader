@@ -32,6 +32,13 @@ app.controller("uploadQueueCtrl", function($scope, $rootScope, $timeout, $interv
   html.on("dragover", dragOver);
   html.on("dragleave", dragEnd);
   html.on("drop", dropFile);
+  
+  $scope.$on("$destroy", function(){
+    html.removeEventListener("dragenter");
+    html.removeEventListener("dragover");
+    html.removeEventListener("dragleave");
+    html.removeEventListener("drop");
+  });
 
   function preventDefault(event) {
     event.preventDefault();

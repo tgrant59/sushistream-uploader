@@ -11,10 +11,11 @@ var app = angular.module("sushistream-uploader", [
   "dashboardModule",
   "loginModule",
   "subscribeModule",
-  "unverifiedModule"
+  "unverifiedModule",
+  "updateModule"
 ]);
 
-app.run(function($rootScope, ipc, config, constants, userService, transcodeService, uploadService){
+app.run(function($rootScope, $state, ipc, config, constants, userService, transcodeService, uploadService){
   $rootScope.config = config;
   $rootScope.constants = constants;
   userService.initUser();
@@ -48,6 +49,15 @@ app.run(function($rootScope, ipc, config, constants, userService, transcodeServi
         break;
       case "uploading-abort":
         uploadService.receiveUploadAbortAll();
+        break;
+      case "update-checking":
+        $state.go("update.checking");
+        break;
+      case "update-found":
+        $state.go("update.found");
+        break;
+      case "update-not-found":
+        $state.go("update.notFound");
         break;
       case "confirm-close":
         confirmOnClose();

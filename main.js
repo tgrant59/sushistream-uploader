@@ -1,5 +1,5 @@
 const electron = require("electron")
-const {app, BrowserWindow, Menu, shell, dialog} = electron;
+const {app, BrowserWindow, Menu, shell, dialog, autoUpdater, crashReporter} = electron;
 const util = require("util");
 const child_process = require("child_process");
 const fs = require("fs-extra");
@@ -32,6 +32,15 @@ var quit;
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
 
+function sendMessage(event, msg) {
+  if (win) {
+    win.webContents.send("electron-msg", {
+      event: event,
+      msg: msg
+    });
+  }
+}
+
 function createWindow() {
   // Set the Menu
   Menu.setApplicationMenu(menu);
@@ -54,16 +63,11 @@ function createWindow() {
   // Confirm on closing
   win.on("close", function(e) {
     e.preventDefault();
-    if (win) {
-      win.webContents.send("electron-msg", {
-        event: "confirm-close",
-        msg: {}
-      });
-    }
+    sendMessage("confirm-close");
   });
 
   // Emitted when the window is closed.
-  win.on("closed", () => {
+  win.on("closed", function() {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
@@ -117,7 +121,7 @@ function destroyWindow() {
 app.on("ready", appInit);
 
 // Quit when all windows are closed.
-app.on("window-all-closed", () => {
+app.on("window-all-closed", function() {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== "darwin") {
@@ -125,7 +129,7 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("activate", () => {
+app.on("activate", function() {
   // On OS X it is common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (win === null) {
@@ -133,14 +137,14 @@ app.on("activate", () => {
   }
 });
 
-app.on("before-quit", () => {
+app.on("before-quit", function() {
   quit = true;
 });
 
 function appInit() {
   createWindow();
   // Browser object communication controller
-  electron.ipcMain.on("electron-msg", (event, msg) => {
+  electron.ipcMain.on("electron-msg", function(event, msg) {
     switch (msg.event) {
       case "transcoding-frames":
         getVideoFrames(msg.msg);
@@ -162,6 +166,57 @@ function appInit() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+//                                                  Crash Reporter Setup
+// ---------------------------------------------------------------------------------------------------------------------
+if (config.crashReporter.start) {
+  crashReporter.start({
+    productName: config.crashReporter.productName,
+    companyName: config.crashReporter.companyName,
+    submitURL: config.crashReporter.submitURL,
+    autoSubmit: config.crashReporter.autoSubmit
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+//                                                  Auto Updater Setup
+// ---------------------------------------------------------------------------------------------------------------------
+var manualUpdate;
+if (config.autoUpdater.start) {
+  autoUpdater.setFeedURL(config.autoUpdater.url);
+  autoUpdater.checkForUpdates();
+
+  app.on("checking-for-update", function(){
+    if (manualUpdate) {
+      sendMessage("update-checking");
+    }
+  });
+
+  app.on("update-available", function(){
+    if (manualUpdate) {
+      sendMessage("update-found");
+    }
+  });
+
+  app.on("update-not-available", function(){
+    if (manualUpdate) {
+      sendMessage("update-not-found");
+    }
+    manualUpdate = false;
+  });
+
+  app.on("update-downloaded", function(){
+    dialog.showMessageBox(win, {
+      type: "warning",
+      buttons: ["Update"],
+      title: "New Version Found",
+      message: "New version found. Quit now and and install the update"
+    });
+    manualUpdate = false;
+    autoUpdater.quitAndInstall();
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 //                                                  Menu Setup
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -172,11 +227,7 @@ let menuTemplate = [{
     click() { shell.openExternal(config.externalAppUrl + "/account/profile"); }
   }, {
     label: "Logout",
-    click() {
-      win.webContents.send("electron-msg", {
-        event: "logout"
-      });
-    }
+    click() { sendMessage("logout"); }
   }]
 }, {
   label: "Get More Space",
@@ -213,6 +264,14 @@ let menuTemplate = [{
   }, {
     label: "Learn More",
     click() { shell.openExternal(config.externalSiteUrl); }
+  }, {
+    label: "Check for Updates",
+    click () {
+      if (config.initializeAutoUpdater) {
+        manualUpdate = true;
+        autoUpdater.checkForUpdates();
+      }
+    }
   }]
 }];
 
@@ -222,6 +281,14 @@ if (process.platform === "darwin") {
     submenu: [{
       label: "About SushiStream Uploader",
       role: "about"
+    }, {
+      label: "Check for Updates",
+      click () {
+        if (config.initializeAutoUpdater) {
+          manualUpdate = true;
+          autoUpdater.checkForUpdates();
+        }
+      }
     }, {
       type: "separator"
     }, {
@@ -300,12 +367,7 @@ function getVideoFrames(video) {
     } else {
       msg.frames = parseInt(stdout);
     }
-    if (win) {
-      win.webContents.send("electron-msg", {
-        event: "transcoding-frames",
-        msg: msg
-      });
-    }
+    sendMessage("transcoding-frames", msg);
   });
 }
 
@@ -328,25 +390,15 @@ function startTranscoding(video) {
   tail.on("line", function (line) {
     lineList = line.split("=");
     if (lineList[0] === "frame") {
-      if (win) {
-        win.webContents.send("electron-msg", {
-          event: "transcoding-progress-frames",
-          msg: {
-            id: video.id,
-            frames: parseInt(lineList[1])
-          }
-        });
-      }
+      sendMessage("transcoding-progress-frames", {
+        id: video.id,
+        frames: parseInt(lineList[1])
+      });
     } else if (lineList[0] === "fps") {
-      if (win) {
-        win.webContents.send("electron-msg", {
-          event: "transcoding-progress-fps",
-          msg: {
-            id: video.id,
-            fps: parseFloat(lineList[1])
-          }
-        });
-      }
+      sendMessage("transcoding-progress-fps", {
+        id: video.id,
+        fps: parseFloat(lineList[1])
+      });
     }
   });
   tail.on("tailError", function(err) {
@@ -361,12 +413,10 @@ function startTranscoding(video) {
     if (err) {
       console.log(err);
       fs.removeSync(transcodingDir);
-      if (win) {
-        win.webContents.send("electron-msg", {
-          event: "transcoding-error",
-          msg: {id: video.id, err: err}
-        });
-      }
+      sendMessage("transcoding-error", {
+        id: video.id, 
+        err: err
+      });
     } else {
       fs.removeSync(logfile);
       var newUploadDir = uploadDir + video.id + "/"
@@ -378,24 +428,16 @@ function startTranscoding(video) {
           for (var i = 0; i < files.length; i++) {
             folderSize = folderSize + fs.statSync(newUploadDir + files[i]).size;
           }
-          if (win) {
-            win.webContents.send("electron-msg", {
-              event: "transcoding-finished",
-              msg: {
-                id: video.id,
-                shardsToUpload: files,
-                size: folderSize
-              }
-            });
-          }
+          sendMessage("transcoding-finished", {
+            id: video.id,
+            shardsToUpload: files,
+            size: folderSize
+          });
         } else {
           console.log(err);
-          if (win) {
-            win.webContents.send("electron-msg", {
-              event: "transcoding-error",
-              msg: {id: video.id}
-            });
-          }
+          sendMessage("transcoding-error", {
+            id: video.id
+          });
         }
       });
     }
@@ -409,12 +451,9 @@ function abortTranscoding(video) {
     tail.stop();
     transcoderVideoId = null;
     fs.removeSync(transcodingDir);
-    if (win) {
-      win.webContents.send("electron-msg", {
-        event: "transcoding-abort",
-        msg: {id: video.id}
-      });
-    }
+    sendMessage("transcoding-abort", {
+      id: video.id
+    });
   }
 }
 
@@ -435,38 +474,23 @@ function uploadShard(msg, retry) {
         if (err) {
           console.log("uploading err: ", err);
           fs.removeSync(uploadDir + msg.id);
-          if (win) {
-            win.webContents.send("electron-msg", {
-              event: "uploading-error",
-              msg: {
-                id: msg.id
-              }
-            });
-          }
+          sendMessage("uploading-error", {
+            id: msg.id
+          });
         } else {
-          if (win) {
-            win.webContents.send("electron-msg", {
-              event: "uploading-success",
-              msg: {
-                id: msg.id,
-                filename: msg.file
-              }
-            });
-          }
+          sendMessage("uploading-success", {
+            id: msg.id,
+            filename: msg.file
+          });
         }
       });
   } catch (err) {
     if (retry) {
       console.log("uploading err: ", err);
       fs.removeSync(uploadDir + msg.id);
-      if (win) {
-        win.webContents.send("electron-msg", {
-          event: "uploading-error",
-          msg: {
-            id: msg.id
-          }
-        });
-      }
+      sendMessage("uploading-error", {
+        id: msg.id
+      });
     } else {
       uploadShard(msg, true);
     }

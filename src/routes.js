@@ -33,6 +33,30 @@ app.config(function($stateProvider, $urlRouterProvider, $httpProvider, config, c
       resolve: {
         authenticated: authenticated([constants.roles.unverified])
       }
+    })
+    .state("update", {
+      url: "/update",
+      abstract: true,
+      templateUrl: "pages/update/update.html",
+      controller: "updateCtrl",
+      resolve: {
+        authenticated: authenticated([constants.roles.unverified, constants.roles.unpaid, constants.roles.paid, constants.roles.cancelled])
+      }
+    })
+    .state("update.checking", {
+      url: "/update/checking",
+      templateUrl: "pages/update/update-checking/update-checking.html",
+      controller: "updateCheckingCtrl"
+    })
+    .state("update.found", {
+      url: "/update/found",
+      templateUrl: "pages/update/update-found/update-found.html",
+      controller: "updateFoundCtrl"
+    })
+    .state("update.notFound", {
+      url: "/update/not-found",
+      templateUrl: "pages/update/update-not-found/update-not-found.html",
+      controller: "updateNotFoundCtrl"
     });
 
   $urlRouterProvider.when("", "/");

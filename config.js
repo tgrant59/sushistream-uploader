@@ -3,5 +3,16 @@ module.exports = {
   tmpDir: __dirname + "/tmp",
   openDevTools: true,
   externalSiteUrl: "https://sushistream.co",
-  externalAppUrl: "http://localhost:7000/#"
+  externalAppUrl: "http://localhost:7000/#",
+  autoUpdater: {
+    start: false,
+    url: "https://api.sushistream.co/squirrel/"
+  },
+  crashReporter: {
+    start: false,
+    productName: "SushiStream Uploader",
+    companyName: "SushiStream",
+    submitURL: "https://api.sushistream.co/breakpad",
+    autoSubmit: true
+  }
 };
