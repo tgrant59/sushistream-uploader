@@ -6,13 +6,13 @@ module.exports = {
   externalAppUrl: "http://localhost:7000/#",
   autoUpdater: {
     start: false,
-    url: "https://api.sushistream.co/squirrel/"
+    url: "https://uploader.sushistream.co"
   },
   crashReporter: {
     start: false,
     productName: "SushiStream Uploader",
     companyName: "SushiStream",
-    submitURL: "https://api.sushistream.co/breakpad",
+    submitURL: "https://uploader.sushistream.co/breakpad",
     autoSubmit: true
   }
 };
