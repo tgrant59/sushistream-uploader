@@ -38,6 +38,7 @@
     "postcss-flexibility": "^1.0.3"
   },
   "dependencies": {
+    "electron-squirrel-startup": "^1.0.0",
     "file-tail": "^0.3.0",
     "fs-extra": "^0.30.0",
     "get-folder-size": "^1.0.0",

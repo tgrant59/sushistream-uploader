@@ -1,3 +1,4 @@
+if(require('electron-squirrel-startup')) return;  // To make Squirrel.Windows work
 const electron = require("electron")
 const {app, BrowserWindow, Menu, shell, dialog, autoUpdater, crashReporter} = electron;
 const util = require("util");
