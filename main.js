@@ -186,30 +186,26 @@ if (config.autoUpdater.start) {
   autoUpdater.setFeedURL(feedUrl);
   autoUpdater.checkForUpdates();
 
-  app.on("checking-for-update", function(){
-    sendMessage("log", "checking");
+  autoUpdater.on("checking-for-update", function(){
     if (manualUpdate) {
       sendMessage("update-checking");
     }
   });
 
-  app.on("update-available", function(){
-    sendMessage("log", "found");
+  autoUpdater.on("update-available", function(){
     if (manualUpdate) {
       sendMessage("update-found");
     }
   });
 
-  app.on("update-not-available", function(){
-    sendMessage("log", "not found");
+  autoUpdater.on("update-not-available", function(){
     if (manualUpdate) {
       sendMessage("update-not-found");
     }
     manualUpdate = false;
   });
 
-  app.on("update-downloaded", function(){
-    sendMessage("log", "downloaded");
+  autoUpdater.on("update-downloaded", function(){
     dialog.showMessageBox(win, {
       type: "warning",
       buttons: ["Update"],
@@ -274,7 +270,6 @@ let menuTemplate = [{
     click () {
       if (config.autoUpdater.start) {
         manualUpdate = true;
-        sendMessage("log", "updating");
         autoUpdater.checkForUpdates();
       }
     }
@@ -292,7 +287,6 @@ if (process.platform === "darwin") {
       click () {
         if (config.autoUpdater.start) {
           manualUpdate = true;
-          sendMessage("log", "updating");
           autoUpdater.checkForUpdates();
         }
       }
