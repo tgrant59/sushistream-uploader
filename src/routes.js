@@ -3,7 +3,7 @@ var app = angular.module("routesModule", []);
 app.config(function($stateProvider, $urlRouterProvider, $httpProvider, config, constants) {
   $stateProvider
     .state("login", {
-      url: "/login",
+      url: "/",
       templateUrl: "pages/login/login.html",
       controller: "loginCtrl",
       resolve: {
@@ -11,7 +11,7 @@ app.config(function($stateProvider, $urlRouterProvider, $httpProvider, config, c
       }
     })
     .state("dashboard", {
-      url: "/",
+      url: "/dashboard",
       templateUrl: "pages/dashboard/dashboard.html",
       controller: "dashboardCtrl",
       resolve: {
@@ -74,12 +74,12 @@ var authInterceptor = function($q, $location, $rootScope) {
         if ($rootScope.user !== undefined) {
           $rootScope.user = null;
           var currentUrl = $location.url();
-          $location.url("/login").search("next", currentUrl).replace();
+          $location.url("/").search("next", currentUrl).replace();
         } else {
           $rootScope.user = null;
         }
       } else if (rejection.status == 403) {
-        $location.url("/");
+        $location.url("/dashboard");
       }
       return $q.reject(rejection);
     }
@@ -102,17 +102,17 @@ function authenticated(roles, notLoggedIn){
         }
         // if you should not be seeing this page when logged in, redirect to homepage
         else if (notLoggedIn){
-          $location.url("/");
+          $location.url("/dashboard");
         }
         // Checking page authorization
         else if (roles.length > 0 && roles.indexOf(user.role) < 0){
-          $location.url("/");
+          $location.url("/dashboard");
         }
       // if user is not logged in
       } else if (user === null){
         // redirect to login if the page requires authentication
-        if (roles.length > 0 && $location.path() !== "/login"){
-          $location.path("/login");
+        if (roles.length > 0 && $location.path() !== "/"){
+          $location.path("/");
         }
       } else {  // user is undefined
         return false;

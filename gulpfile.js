@@ -158,46 +158,5 @@ gulp.task("watch", ["distribute-js", "distribute-scss", "distribute-html", "dist
   })
 });
 
-// gulp.task("serve", , function(){
-//
-// });
-
-// gulp.task("serve", ["distribute-js", "distribute-scss", "distribute-html", "distribute-third-party", "distribute-images", "watch"], function() {
-  // gulp.src("dist")
-  //   .pipe(webserver({
-  //     livereload: true,
-  //     open: "http://localhost:6000",
-  //     port: 7000
-  //   }))
-// });
-
-// gulp.task("clean-production", function() {
-//   return s3Delete();
-// });
-
-// gulp.task("production", ["distribute-js", "distribute-scss", "distribute-html", "distribute-third-party", "distribute-images", "clean-production"], function(){
-//   gulp.src([
-//     "dist/**/*.js",
-//     "dist/**/*.css",
-//     "dist/**/*.html",
-//     "!dist/index.html"
-//   ]).pipe(gzip())
-//     .pipe(s3(awsConfig));
-//
-//   gulp.src("dist/index.html")
-//     .pipe(replace("<script src="http://localhost:35729/livereload.js"></script>", ""))
-//     .pipe(gzip())
-//     .pipe(s3(awsConfig));
-//
-//   gulp.src([
-//     "dist/**/*",
-//     "!dist/**/*.js",
-//     "!dist/**/*.css",
-//     "!dist/**/*.html",
-//     "!dist/index.html"
-//   ]).pipe(s3(awsConfig))
-//
-// });
-
 gulp.task("default", ["watch"]);
 gulp.task("build", ["distribute-js", "distribute-scss", "distribute-html", "distribute-third-party", "distribute-images", "distribute-bin"]);

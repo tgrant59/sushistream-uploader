@@ -182,24 +182,30 @@ if (config.crashReporter.start) {
 //                                                  Auto Updater Setup
 // ---------------------------------------------------------------------------------------------------------------------
 var manualUpdate;
+var checkingUpdate;
+var foundUpdate;
 if (config.autoUpdater.start) {
   var feedUrl = config.autoUpdater.url + app.getVersion();
   autoUpdater.setFeedURL(feedUrl);
   autoUpdater.checkForUpdates();
 
   autoUpdater.on("checking-for-update", function(){
+    checkingUpdate = true;
     if (manualUpdate) {
       sendMessage("update-checking");
     }
   });
 
   autoUpdater.on("update-available", function(){
+    checkingUpdate = false
+    foundUpdate = true;
     if (manualUpdate) {
       sendMessage("update-found");
     }
   });
 
   autoUpdater.on("update-not-available", function(){
+    checkingUpdate = false;
     if (manualUpdate) {
       sendMessage("update-not-found");
     }
@@ -214,6 +220,8 @@ if (config.autoUpdater.start) {
       message: "New version found. Quit now and and install the update"
     });
     manualUpdate = false;
+    checkingUpdate = false;
+    foundUpdate = false;
     autoUpdater.quitAndInstall();
   });
 }
@@ -271,7 +279,13 @@ let menuTemplate = [{
     click () {
       if (config.autoUpdater.start) {
         manualUpdate = true;
-        autoUpdater.checkForUpdates();
+        if (checkingUpdate) {
+          sendMessage("update-checking");
+        } else if (foundUpdate) {
+          sendMessage("update-found");
+        } else {
+          autoUpdater.checkForUpdates();
+        }
       }
     }
   }]
@@ -288,7 +302,13 @@ if (process.platform === "darwin") {
       click () {
         if (config.autoUpdater.start) {
           manualUpdate = true;
-          autoUpdater.checkForUpdates();
+          if (checkingUpdate) {
+            sendMessage("update-checking");
+          } else if (foundUpdate) {
+            sendMessage("update-found");
+          } else {
+            autoUpdater.checkForUpdates();
+          }
         }
       }
     }, {

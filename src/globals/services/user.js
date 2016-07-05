@@ -31,7 +31,7 @@ app.factory("userService", function($q, $http, $rootScope, $state, $location, $c
       .finally(function(){
         $cookies.remove("csrf-token");
         $cookies.remove("session-id");
-        $location.url("/login");
+        $state.go("login");
       });
   }
   
