@@ -44,6 +44,10 @@
   display: inline-block !important;
   margin: 0 !important;
   width: calc(100% - 82px);
+
+  .bar::after {
+    animation: none !important;
+  }
 }
 
 #browse-loader {
