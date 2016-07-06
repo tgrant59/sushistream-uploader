@@ -9,11 +9,11 @@ const request = require("superagent");
 const config = require("./config");
 
 // Transcoding variables
-const ffprobe = __dirname + "/bin/ffprobe";
+const ffprobe = __dirname + "/bin/" + config.binFilenames.ffprobe;
 const ffprobeParamsPre = ["-i"];
 const ffprobeParamsPost = ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=nb_frames", "-of",
   "default=nokey=1:noprint_wrappers=1"];
-const ffmpeg = __dirname + "/bin/ffmpeg";
+const ffmpeg = __dirname + "/bin/" + config.binFilenames.ffmpeg;
 const ffmpegParamsPre = ["-i"];
 const ffmpegParamsPost =  ["-acodec", "aac", "-hls_list_size", "0", "-hls_time",
   "5", "-hls_segment_filename", `${config.tmpDir}/transcoding/%05d.ts`, `${config.tmpDir}/transcoding/index.m3u8`,
@@ -483,26 +483,50 @@ function abortTranscoding(video) {
 
 function uploadShard(msg, retry) {
   try {
-    request
-      .post(msg.signedUrl.url)
-      .field("key", msg.signedUrl.fields.key)
-      .field("AWSAccessKeyId", msg.signedUrl.fields.AWSAccessKeyId)
-      .field("Policy", msg.signedUrl.fields.policy)
-      .field("Signature", msg.signedUrl.fields.signature)
-      .attach("file", uploadDir + msg.id + "/" + msg.file)
-      .end(function (err, res) {
-        if (err) {
-          fs.removeSync(uploadDir + msg.id);
-          sendMessage("uploading-error", {
-            id: msg.id
-          });
-        } else {
-          sendMessage("uploading-success", {
-            id: msg.id,
-            filename: msg.file
-          });
-        }
-      });
+    if ("x-amz-security-token" in msg.signedUrl.fields) {  // Production
+      request
+        .post(msg.signedUrl.url)
+        .field("key", msg.signedUrl.fields.key)
+        .field("AWSAccessKeyId", msg.signedUrl.fields.AWSAccessKeyId)
+        .field("Policy", msg.signedUrl.fields.policy)
+        .field("Signature", msg.signedUrl.fields.signature)
+        .field("x-amz-security-token", msg.signedUrl.fields["x-amz-security-token"])
+        .attach("file", uploadDir + msg.id + "/" + msg.file)
+        .end(function (err, res) {
+          if (err) {
+            fs.removeSync(uploadDir + msg.id);
+            sendMessage("uploading-error", {
+              id: msg.id
+            });
+          } else {
+            sendMessage("uploading-success", {
+              id: msg.id,
+              filename: msg.file
+            });
+          }
+        });
+    } else {  // Development
+      request
+        .post(msg.signedUrl.url)
+        .field("key", msg.signedUrl.fields.key)
+        .field("AWSAccessKeyId", msg.signedUrl.fields.AWSAccessKeyId)
+        .field("Policy", msg.signedUrl.fields.policy)
+        .field("Signature", msg.signedUrl.fields.signature)
+        .attach("file", uploadDir + msg.id + "/" + msg.file)
+        .end(function (err, res) {
+          if (err) {
+            fs.removeSync(uploadDir + msg.id);
+            sendMessage("uploading-error", {
+              id: msg.id
+            });
+          } else {
+            sendMessage("uploading-success", {
+              id: msg.id,
+              filename: msg.file
+            });
+          }
+        });
+    }
   } catch (err) {
     if (retry) {
       fs.removeSync(uploadDir + msg.id);

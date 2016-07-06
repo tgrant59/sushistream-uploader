@@ -20,7 +20,7 @@ app.controller("uploadInfoCtrl", function($scope, $rootScope, $http, uploadServi
   var nameChangeForm = $("#name-change-form");
   nameChangeForm.form({
     fields: {
-      newName: ["empty", "maxLength[256]"]
+      newName: ["maxLength[256]"]
     }
   });
   
@@ -29,11 +29,15 @@ app.controller("uploadInfoCtrl", function($scope, $rootScope, $http, uploadServi
   function changeName() {
     $scope.nameChangeError = false;
     if (nameChangeForm.form("is valid")) {
-      $scope.nameChangeLoading = true;
       var fields = nameChangeForm.form("get values");
+      if (!fields.newName || fields.newName.length === 0) {
+        return;
+      }
+      $scope.nameChangeLoading = true;
       if ($rootScope.selectedUpload.status !== constants.statuses.uploading) {
         $rootScope.selectedUpload.name = fields.newName;
         $scope.nameChangeLoading = false;
+        nameChangeForm.form("reset");
       } else {
         var selectedUploadId = $rootScope.selectedUpload.id;
         var params = {
