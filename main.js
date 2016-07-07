@@ -546,7 +546,7 @@ function sendMessage(event, msg) {
 function removeSync(file) {
   var i = 0;
   var error;
-  while i < 10 {
+  while (i < 10) {
     try {
       fs.removeSync(file);
       break;
