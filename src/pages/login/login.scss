@@ -19,7 +19,7 @@
     top: 0;
 
     // A trick to vertically center the child
-    &:before {
+    &::before {
       content: '';
       display: inline-block;
       height: 100%;

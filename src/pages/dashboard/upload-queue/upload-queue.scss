@@ -14,12 +14,12 @@
   color: $white-barely-transparent;
 
   &:hover {
-    background-color: rgba(0, 0, 0, .1);
+    background-color: $black-overlay;
     color: $white;
   }
 
   &.selected {
-    background-color: rgba(0, 0, 0, .1);
+    background-color: $black-overlay;
     color: $white;
   }
 }
