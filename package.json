@@ -1,7 +1,7 @@
 {
   "name": "sushistream-uploader",
   "productName": "SushiStream Uploader",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "The cross-platform Desktop Uploader for SushiStream. Stream your videos to any device, it's like your own personal Netflix.",
   "main": "main.js",
   "scripts": {
