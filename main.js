@@ -33,15 +33,6 @@ var quit;
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
 
-function sendMessage(event, msg) {
-  if (win) {
-    win.webContents.send("electron-msg", {
-      event: event,
-      msg: msg
-    });
-  }
-}
-
 function createWindow() {
   // Set the Menu
   Menu.setApplicationMenu(menu);
@@ -372,7 +363,7 @@ const menu = Menu.buildFromTemplate(menuTemplate);
 // ---------------------------------------------------------------------------------------------------------------------
 //                                                  Transcoding Setup
 // ---------------------------------------------------------------------------------------------------------------------
-fs.removeSync(config.tmpDir);
+removeSync(config.tmpDir);
 fs.mkdirSync(config.tmpDir);
 fs.mkdirSync(uploadDir);
 
@@ -398,7 +389,7 @@ function startTranscoding(video) {
     transcoder.kill();
   }
   transcoderVideoId = video.id;
-  fs.removeSync(transcodingDir);
+  removeSync(transcodingDir);
   fs.mkdirSync(transcodingDir);
   var ffmpegParams = ffmpegParamsPre.concat([video.path]).concat(ffmpegParamsPost);
   try {
@@ -433,17 +424,17 @@ function startTranscoding(video) {
     transcoder = null;
     transcoderVideoId = null;
     if (err) {
-      fs.removeSync(transcodingDir);
+      removeSync(transcodingDir);
       sendMessage("transcoding-error", {
         id: video.id, 
         err: err
       });
     } else {
-      fs.removeSync(logfile);
+      removeSync(logfile);
       var newUploadDir = uploadDir + video.id + "/"
       fs.move(transcodingDir, newUploadDir.slice(0, -1), function(err){
         if (!err) {
-          fs.removeSync(transcodingDir);
+          removeSync(transcodingDir);
           var files = fs.readdirSync(newUploadDir);
           var folderSize = 0;
           for (var i = 0; i < files.length; i++) {
@@ -470,7 +461,7 @@ function abortTranscoding(video) {
     transcoder = null;
     tail.stop();
     transcoderVideoId = null;
-    fs.removeSync(transcodingDir);
+    removeSync(transcodingDir);
     sendMessage("transcoding-abort", {
       id: video.id
     });
@@ -494,7 +485,7 @@ function uploadShard(msg, retry) {
         .attach("file", uploadDir + msg.id + "/" + msg.file)
         .end(function (err, res) {
           if (err) {
-            fs.removeSync(uploadDir + msg.id);
+            removeSync(uploadDir + msg.id);
             sendMessage("uploading-error", {
               id: msg.id
             });
@@ -515,7 +506,7 @@ function uploadShard(msg, retry) {
         .attach("file", uploadDir + msg.id + "/" + msg.file)
         .end(function (err, res) {
           if (err) {
-            fs.removeSync(uploadDir + msg.id);
+            removeSync(uploadDir + msg.id);
             sendMessage("uploading-error", {
               id: msg.id
             });
@@ -529,12 +520,42 @@ function uploadShard(msg, retry) {
     }
   } catch (err) {
     if (retry) {
-      fs.removeSync(uploadDir + msg.id);
-      sendMessage("uploading-error", {
+      removeSync(uploadDir + msg.id);
+      removeSync("uploading-error", {
         id: msg.id
       });
     } else {
       uploadShard(msg, true);
     }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+//                                                  Helper Functions
+// ---------------------------------------------------------------------------------------------------------------------
+
+function sendMessage(event, msg) {
+  if (win) {
+    win.webContents.send("electron-msg", {
+      event: event,
+      msg: msg
+    });
+  }
+}
+
+function removeSync(file) {
+  var i = 0;
+  var error;
+  while i < 10 {
+    try {
+      fs.removeSync(file);
+      break;
+    } catch (err) {
+      error = err;
+    }
+  }
+  if (i === 10) {
+    console.log(error);
+    throw error;
   }
 }
