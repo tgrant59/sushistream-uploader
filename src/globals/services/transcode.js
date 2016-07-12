@@ -52,16 +52,18 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
   }
 
   function _update_progress(video) {
-    var progress;
+    var progressBar = $("#transcoding-" + video.id);
     if (video.noFrames) {
-      progress = 100;
+      progressBar.addClass("full-width");
+      progressBar.progress("set bar label", "Transcoding...");
+      progressBar.progress("set active");
     } else if (video.frames && video.total_frames && video.fps) {
-      progress = (video.frames / video.total_frames) * 100;
+      var progress = (video.frames / video.total_frames) * 100;
       video.eta = (video.total_frames - video.frames) / video.fps;
+      progressBar.progress({
+        value: progress
+      });
     }
-    $("#transcoding-" + video.id).progress({
-      value: progress
-    });
   }
   
   //// Event Handlers
