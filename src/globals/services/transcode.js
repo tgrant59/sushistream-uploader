@@ -52,13 +52,16 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
   }
 
   function _update_progress(video) {
-    if (video.frames && video.total_frames && video.fps) {
-      var progress = (video.frames / video.total_frames) * 100;
+    var progress;
+    if (video.noFrames) {
+      progress = 100;
+    } else if (video.frames && video.total_frames && video.fps) {
+      progress = (video.frames / video.total_frames) * 100;
       video.eta = (video.total_frames - video.frames) / video.fps;
-      $("#transcoding-" + video.id).progress({
-        value: progress
-      });
     }
+    $("#transcoding-" + video.id).progress({
+      value: progress
+    });
   }
   
   //// Event Handlers
@@ -66,7 +69,11 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
   function updateTranscodingFrames(msg) {
     for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
       if ($rootScope.queuedUploads[i].id == msg.id) {
-        $rootScope.queuedUploads[i].total_frames = msg.frames;
+        if (msg.frames) {
+          $rootScope.queuedUploads[i].total_frames = msg.frames;
+        } else {
+          $rootScope.queuedUploads[i].noFrames = true;
+        }
       }
     }
   }

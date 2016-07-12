@@ -377,7 +377,12 @@ function getVideoFrames(video) {
     if (err) {
       msg.error = true;
     } else {
-      msg.frames = parseInt(stdout);
+      try {
+        msg.frames = parseInt(stdout);
+      } catch (err) {
+        video.noFrames = true;
+        msg.noFrames = true;
+      }
     }
     sendMessage("transcoding-frames", msg);
   });
@@ -403,12 +408,12 @@ function startTranscoding(video) {
   }
   tail.on("line", function (line) {
     lineList = line.split("=");
-    if (lineList[0] === "frame") {
+    if (lineList[0] === "frame" && !video.noFrames) {
       sendMessage("transcoding-progress-frames", {
         id: video.id,
         frames: parseInt(lineList[1])
       });
-    } else if (lineList[0] === "fps") {
+    } else if (lineList[0] === "fps" && !video.noFrames) {
       sendMessage("transcoding-progress-fps", {
         id: video.id,
         fps: parseFloat(lineList[1])
