@@ -17,7 +17,7 @@ const ffmpeg = __dirname + "/bin/" + config.binFilenames.ffmpeg;
 const ffmpegParamsPre = ["-i"];
 const ffmpegParamsPost =  ["-acodec", "aac", "-hls_list_size", "0", "-hls_time",
   "5", "-hls_segment_filename", `${config.tmpDir}/transcoding/%05d.ts`, `${config.tmpDir}/transcoding/index.m3u8`,
-  "-progress", `${config.tmpDir}/transcoding/progress.log`];
+  "-progress", `${config.tmpDir}/transcoding/progress.log`, "-loglevel", "quiet"];
 var transcodingDir = config.tmpDir + "/transcoding/";
 var uploadDir = config.tmpDir + "/upload/";
 var logfile = transcodingDir + "progress.log";
