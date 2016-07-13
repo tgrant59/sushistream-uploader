@@ -34,8 +34,9 @@ app.controller("folderStructureCtrl", function($scope, $rootScope, $http, $q, $t
 
   // Init folder structure
   var baseFolder;
-  loadBaseFolder();
-
+  $timeout(function(){
+    loadBaseFolder();
+  });
   var folderInterval = $interval(function(){
     loadBaseFolder();
   }, constants.timing.folderStructureRefreshInterval);
