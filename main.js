@@ -390,42 +390,26 @@ function getVideoFrames(video) {
 
 function startTranscoding(video) {
   if (transcoder) {
-    tail.stop();
+    if (tail) {
+      tail.stop();
+    }
     transcoder.kill();
   }
   transcoderVideoId = video.id;
   removeSync(transcodingDir);
   fs.mkdirSync(transcodingDir);
   var ffmpegParams = ffmpegParamsPre.concat([video.path]).concat(ffmpegParamsPost);
-  try {
-    fs.ensureFileSync(logfile);
-    tail = fileTail.startTailing(logfile);
-  } catch (err) {
-    fs.ensureFileSync(logfile);
-    try {
-      tail = fileTail.startTailing(logfile);
-    } catch (err) {}
+  tail = startTailingLogfile(video);
+  if (!tail) {
+    setTimeout(function(){
+      tail = startTailingLogfile(video);
+    }, 500);
   }
-  tail.on("line", function (line) {
-    lineList = line.split("=");
-    if (lineList[0] === "frame" && !video.noFrames) {
-      sendMessage("transcoding-progress-frames", {
-        id: video.id,
-        frames: parseInt(lineList[1])
-      });
-    } else if (lineList[0] === "fps" && !video.noFrames) {
-      sendMessage("transcoding-progress-fps", {
-        id: video.id,
-        fps: parseFloat(lineList[1])
-      });
-    }
-  });
-  tail.on("error", function(err) {
-    tail.stop();
-  });
   
   transcoder = child_process.execFile(ffmpeg, ffmpegParams, {maxBuffer: 10000 * 1024}, function(err) {
-    tail.stop();
+    if (tail) {
+      tail.stop();
+    }
     transcoder = null;
     transcoderVideoId = null;
     if (err) {
@@ -464,13 +448,42 @@ function abortTranscoding(video) {
   if (transcoder && transcoderVideoId === video.id) {
     transcoder.kill();
     transcoder = null;
-    tail.stop();
+    if (tail) {
+      tail.stop();
+    }
     transcoderVideoId = null;
     removeSync(transcodingDir);
     sendMessage("transcoding-abort", {
       id: video.id
     });
   }
+}
+
+function startTailingLogfile(video) {
+  try {
+    tail = fileTail.startTailing(logfile);
+  } catch (err) {
+    return null;
+  }
+  tail.on("line", function (line) {
+    lineList = line.split("=");
+    if (lineList[0] === "frame" && !video.noFrames) {
+      sendMessage("transcoding-progress-frames", {
+        id: video.id,
+        frames: parseInt(lineList[1])
+      });
+    } else if (lineList[0] === "fps" && !video.noFrames) {
+      sendMessage("transcoding-progress-fps", {
+        id: video.id,
+        fps: parseFloat(lineList[1])
+      });
+    }
+  });
+  tail.on("tailError", function(err) {
+    console.log("tailError", err);
+    tail.stop();
+  });
+  return tail;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
