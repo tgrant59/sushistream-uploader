@@ -10,16 +10,39 @@
 
 #video-explorer-label {
   border-radius: 0 !important;
-  padding-bottom: 3px;
+  min-height: 33px;
   position: relative;
+
+  .grid {
+    padding-bottom: 8px;
+    padding-top: 14px;
+
+    .column {
+      padding-bottom: 0;
+      padding-top: 0;
+    }
+  }
 }
 
 #video-explorer-list {
   flex: 1 1 auto;
-  margin-top: 10px !important;
+  margin-top: 0 !important;
   overflow-y: auto;
   padding-left: 10px;
   padding-right: 10px;
+
+  .item {
+    &:first-child {
+      margin-top: 6px;
+    }
+    &:last-child {
+      margin-bottom: 6px;
+    }
+  }
+
+  .folder-empty {
+    margin-top: 10px;
+  }
 }
 
 .browse-breadcrumbs {
