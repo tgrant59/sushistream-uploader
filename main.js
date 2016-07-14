@@ -420,7 +420,7 @@ function startTranscoding(video) {
       });
     }
   });
-  tail.on("tailError", function(err) {
+  tail.on("error", function(err) {
     tail.stop();
   });
   
