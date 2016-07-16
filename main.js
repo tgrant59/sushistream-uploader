@@ -8,30 +8,18 @@ const fileTail = require("file-tail");
 const request = require("superagent");
 const config = require("./config");
 
-// Transcoding variables
-const ffprobe = __dirname + "/bin/" + config.binFilenames.ffprobe;
-const ffprobeParamsPre = ["-i"];
-const ffprobeParamsPost = ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=nb_frames", "-of",
-  "default=nokey=1:noprint_wrappers=1"];
-const ffmpeg = __dirname + "/bin/" + config.binFilenames.ffmpeg;
-const ffmpegParamsPre = ["-i"];
-const ffmpegParamsPost =  ["-acodec", "aac", "-hls_list_size", "0", "-hls_time",
-  "5", "-hls_segment_filename", `${config.tmpDir}/transcoding/%05d.ts`, `${config.tmpDir}/transcoding/index.m3u8`,
-  "-progress", `${config.tmpDir}/transcoding/progress.log`, "-loglevel", "quiet"];
-var transcodingDir = config.tmpDir + "/transcoding/";
-var uploadDir = config.tmpDir + "/upload/";
-var logfile = transcodingDir + "progress.log";
-var transcoder;
-var transcoderVideoId;
-var tail;
-var quit;
+// global scope variables
+let win;
+let transcoder;
+let transcoderVideoId;
+let tail;
+let quit;
 
 // ---------------------------------------------------------------------------------------------------------------------
 //                                                  Window Setup
 // ---------------------------------------------------------------------------------------------------------------------
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let win;
 
 function createWindow() {
   // Set the Menu
@@ -96,6 +84,7 @@ function destroyWindow() {
   }
   transcoder = null;
   transcoderVideoId = null;
+  // Give time for the uploading-abort message to reach the renderer
   setTimeout(function(){
     win.destroy();
     if (quit) {
@@ -365,21 +354,22 @@ const menu = Menu.buildFromTemplate(menuTemplate);
 // ---------------------------------------------------------------------------------------------------------------------
 removeSync(config.tmpDir);
 fs.mkdirSync(config.tmpDir);
-fs.mkdirSync(uploadDir);
-
+fs.mkdirSync(config.uploadDir);
 
 function getVideoFrames(video) {
-  var ffprobeParams = ffprobeParamsPre.concat([video.path]).concat(ffprobeParamsPost);
-  child_process.execFile(ffprobe, ffprobeParams, function(err, stdout, stderr){
+  var ffprobeParams = config.bin.ffprobe.preParams.concat([video.path]).concat(config.bin.ffprobe.postParams);
+  child_process.execFile(config.bin.ffprobe.path, ffprobeParams, function(err, stdout, stderr){
     var msg = {
       id: video.id
     }
     if (err) {
+      log(err, "ffprobe child_process");
       msg.error = true;
     } else {
       try {
         msg.frames = parseInt(stdout);
       } catch (err) {
+        log(err, "ffprobe parseInt");
         video.noFrames = true;
         msg.noFrames = true;
       }
@@ -396,34 +386,40 @@ function startTranscoding(video) {
     transcoder.kill();
   }
   transcoderVideoId = video.id;
-  removeSync(transcodingDir);
-  fs.mkdirSync(transcodingDir);
-  var ffmpegParams = ffmpegParamsPre.concat([video.path]).concat(ffmpegParamsPost);
-  tail = startTailingLogfile(video);
-  if (!tail) {
-    setTimeout(function(){
-      tail = startTailingLogfile(video);
-    }, 500);
-  }
-  
-  transcoder = child_process.execFile(ffmpeg, ffmpegParams, {maxBuffer: 10000 * 1024}, function(err) {
+  removeSync(config.transcodingDir);
+  fs.mkdirSync(config.transcodingDir);
+  var ffmpegParams = config.bin.ffmpeg.preParams.concat([video.path]).concat(config.bin.ffmpeg.postParams);
+  setTimeout(function(){
+    tail = startTailingLogfile(video);
+    if (!tail) {
+      // Backup
+      setTimeout(function(){
+        tail = startTailingLogfile(video);
+      }, 2000);
+    }
+  }, 2000);
+
+  transcoder = child_process.execFile(config.bin.ffmpeg.path, ffmpegParams, {maxBuffer: 10000 * 1024}, function(err) {
     if (tail) {
       tail.stop();
     }
+    setTimeout(function(){
+      removeSync(config.logfile);
+    }, 2000);
     transcoder = null;
     transcoderVideoId = null;
     if (err) {
-      removeSync(transcodingDir);
+      log(err, "transcoder child_process");
+      removeSync(config.transcodingDir);
       sendMessage("transcoding-error", {
-        id: video.id, 
+        id: video.id,
         err: err
       });
     } else {
-      removeSync(logfile);
-      var newUploadDir = uploadDir + video.id + "/"
-      fs.move(transcodingDir, newUploadDir.slice(0, -1), function(err){
+      var newUploadDir = config.uploadDir + video.id + "/"
+      fs.move(config.transcodingDir, newUploadDir.slice(0, -1), function(err){
         if (!err) {
-          removeSync(transcodingDir);
+          removeSync(config.transcodingDir);
           var files = fs.readdirSync(newUploadDir);
           var folderSize = 0;
           for (var i = 0; i < files.length; i++) {
@@ -435,6 +431,7 @@ function startTranscoding(video) {
             size: folderSize
           });
         } else {
+          log(err, "fs move");
           sendMessage("transcoding-error", {
             id: video.id
           });
@@ -452,7 +449,7 @@ function abortTranscoding(video) {
       tail.stop();
     }
     transcoderVideoId = null;
-    removeSync(transcodingDir);
+    removeSync(config.transcodingDir);
     sendMessage("transcoding-abort", {
       id: video.id
     });
@@ -461,8 +458,9 @@ function abortTranscoding(video) {
 
 function startTailingLogfile(video) {
   try {
-    tail = fileTail.startTailing(logfile);
+    tail = fileTail.startTailing(config.logfile);
   } catch (err) {
+    log(err, "fileTail.startTailing");
     return null;
   }
   tail.on("line", function (line) {
@@ -480,7 +478,7 @@ function startTailingLogfile(video) {
     }
   });
   tail.on("tailError", function(err) {
-    console.log("tailError", err);
+    log(err, "tailError");
     tail.stop();
   });
   return tail;
@@ -500,10 +498,12 @@ function uploadShard(msg, retry) {
         .field("Policy", msg.signedUrl.fields.policy)
         .field("Signature", msg.signedUrl.fields.signature)
         .field("x-amz-security-token", msg.signedUrl.fields["x-amz-security-token"])
-        .attach("file", uploadDir + msg.id + "/" + msg.file)
+        .attach("file", config.uploadDir + msg.id + "/" + msg.file)
         .end(function (err, res) {
           if (err) {
-            removeSync(uploadDir + msg.id);
+            log(err, "request.post Production");
+            log(res);
+            removeSync(config.uploadDir + msg.id);
             sendMessage("uploading-error", {
               id: msg.id
             });
@@ -521,10 +521,12 @@ function uploadShard(msg, retry) {
         .field("AWSAccessKeyId", msg.signedUrl.fields.AWSAccessKeyId)
         .field("Policy", msg.signedUrl.fields.policy)
         .field("Signature", msg.signedUrl.fields.signature)
-        .attach("file", uploadDir + msg.id + "/" + msg.file)
+        .attach("file", config.uploadDir + msg.id + "/" + msg.file)
         .end(function (err, res) {
           if (err) {
-            removeSync(uploadDir + msg.id);
+            log(err, "request.post Development");
+            log(res);
+            removeSync(config.uploadDir + msg.id);
             sendMessage("uploading-error", {
               id: msg.id
             });
@@ -537,8 +539,9 @@ function uploadShard(msg, retry) {
         });
     }
   } catch (err) {
+    log(err, "request.post Failure");
     if (retry) {
-      removeSync(uploadDir + msg.id);
+      removeSync(config.uploadDir + msg.id);
       removeSync("uploading-error", {
         id: msg.id
       });
@@ -561,6 +564,16 @@ function sendMessage(event, msg) {
   }
 }
 
+function log(msg, origin) {
+  if (config.logging) {
+    if (origin) {
+      console.log("Error Origin: " + origin);
+    }
+    console.log(msg);
+    sendMessage("log", msg);
+  }
+}
+
 function removeSync(file) {
   var i = 0;
   var error;
@@ -573,7 +586,7 @@ function removeSync(file) {
     }
   }
   if (i === 10) {
-    console.log(error);
+    log("removeSync Failed 10 Times", "removeSync");
     throw error;
   }
 }
