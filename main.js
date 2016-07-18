@@ -4,7 +4,7 @@ const {app, BrowserWindow, Menu, shell, dialog, autoUpdater, crashReporter} = el
 const util = require("util");
 const child_process = require("child_process");
 const fs = require("fs-extra");
-const fileTail = require("file-tail");
+const readlines = require("n-readlines");
 const request = require("superagent");
 const config = require("./config");
 
@@ -12,7 +12,7 @@ const config = require("./config");
 let win;
 let transcoder;
 let transcoderVideoId;
-let tail;
+let frameChecker;
 let quit;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ function destroyWindow() {
     msg: {}
   });
   if (transcoder) {
-    tail.stop();
+    stopFrameChecker();
     transcoder.kill();
   }
   transcoder = null;
@@ -380,32 +380,18 @@ function getVideoFrames(video) {
 
 function startTranscoding(video) {
   if (transcoder) {
-    if (tail) {
-      tail.stop();
-    }
+    stopFrameChecker();
     transcoder.kill();
   }
   transcoderVideoId = video.id;
   removeSync(config.transcodingDir);
   fs.mkdirSync(config.transcodingDir);
   var ffmpegParams = config.bin.ffmpeg.preParams.concat([video.path]).concat(config.bin.ffmpeg.postParams);
-  setTimeout(function(){
-    tail = startTailingLogfile(video);
-    if (!tail) {
-      // Backup
-      setTimeout(function(){
-        tail = startTailingLogfile(video);
-      }, 2000);
-    }
-  }, 2000);
+  startFrameChecker(video);
 
   transcoder = child_process.execFile(config.bin.ffmpeg.path, ffmpegParams, {maxBuffer: 10000 * 1024}, function(err) {
-    if (tail) {
-      tail.stop();
-    }
-    setTimeout(function(){
-      removeSync(config.logfile);
-    }, 2000);
+    stopFrameChecker();
+    removeSync(config.logfile);
     transcoder = null;
     transcoderVideoId = null;
     if (err) {
@@ -445,9 +431,7 @@ function abortTranscoding(video) {
   if (transcoder && transcoderVideoId === video.id) {
     transcoder.kill();
     transcoder = null;
-    if (tail) {
-      tail.stop();
-    }
+    stopFrameChecker();
     transcoderVideoId = null;
     removeSync(config.transcodingDir);
     sendMessage("transcoding-abort", {
@@ -456,32 +440,45 @@ function abortTranscoding(video) {
   }
 }
 
-function startTailingLogfile(video) {
-  try {
-    tail = fileTail.startTailing(config.logfile);
-  } catch (err) {
-    log(err, "fileTail.startTailing");
-    return null;
+// --------- Frame Checker ----------
+
+function startFrameChecker(video) {
+  if (frameChecker) {
+    stopFrameChecker();
   }
-  tail.on("line", function (line) {
-    lineList = line.split("=");
-    if (lineList[0] === "frame" && !video.noFrames) {
+  frameChecker = setInterval(function() {
+    let liner = new readlines(config.logfile);
+    let line;
+    let frames;
+    let fps;
+    while (line = liner.next()) {
+      lineSplit = line.toString('ascii').split("=");
+      if (lineSplit[0] === "frame" && !video.noFrames) {
+        frames = lineSplit[1];
+      } else if (lineSplit[0] === "fps" && !video.noFrames) {
+        fps = lineSplit[1];
+      }
+    }
+    if (frames) {
       sendMessage("transcoding-progress-frames", {
         id: video.id,
-        frames: parseInt(lineList[1])
-      });
-    } else if (lineList[0] === "fps" && !video.noFrames) {
-      sendMessage("transcoding-progress-fps", {
-        id: video.id,
-        fps: parseFloat(lineList[1])
+        frames: parseInt(frames)
       });
     }
-  });
-  tail.on("tailError", function(err) {
-    log(err, "tailError");
-    tail.stop();
-  });
-  return tail;
+    if (fps) {
+      sendMessage("transcoding-progress-fps", {
+        id: video.id,
+        fps: parseFloat(fps)
+      });
+    }
+  }, 2000);
+}
+
+function stopFrameChecker() {
+  if (frameChecker) {
+    clearInterval(frameChecker);
+  }
+  frameChecker = null;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -539,14 +536,21 @@ function uploadShard(msg, retry) {
         });
     }
   } catch (err) {
-    log(err, "request.post Failure");
-    if (retry) {
+    if (retry && retry > 10) {
+      log(err, "request.post Failure");
       removeSync(config.uploadDir + msg.id);
       removeSync("uploading-error", {
         id: msg.id
       });
     } else {
-      uploadShard(msg, true);
+      if (!retry) {
+        retry = 1;
+      } else {
+        retry = retry + 1
+      }
+      setTimeout(function(){
+        uploadShard(msg, retry);
+      }, 1000);
     }
   }
 }
