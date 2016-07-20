@@ -27,6 +27,7 @@ module.exports = {
   logfile: tmpDir + "/progress.log",
   externalSiteUrl: "https://sushistream.co",
   externalAppUrl: "http://localhost:7000/#",
+  externalApiUrl: "http://localhost:4000",
   bin: {
     ffmpeg: {
       path: mainDir + "/bin/" + ffmpegFilename,

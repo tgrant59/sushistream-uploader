@@ -124,7 +124,7 @@ function checkProgress(video) {
 // ---------------------------------------------------------------------------------------------------------------------
 
 function uploadShard(shard_data, callback, retry) {
-  msg = {};
+  var msg = {};
   try {
     if ("x-amz-security-token" in shard_data.signedUrl.fields) {  // Production
       request
@@ -200,7 +200,9 @@ function log(msg, origin) {
     console.log(msg);
     log_file.write(util.format(msg) + '\n');
   }
-  
+  request
+    .post(config.externalApiUrl + "/v1/error")
+    .send({error: msg})
 }
 
 function removeSync(file) {

@@ -63,7 +63,7 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
       progressBar.addClass("full-width");
       progressBar.progress("set bar label", "Transcoding...");
       progressBar.progress("set active");
-    }, 1000);
+    }, 2000);
   }
 
   function updateProgress(video) {
