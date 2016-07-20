@@ -21,7 +21,7 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
       path: video.file.path
     };
     backgroundProcessService.getVideoFrames(videoMsg, function(msg){
-      if (msg.error) {
+      if (msg.error || msg.frames === 0) {
         setProgressNoFrames(video);
       } else {
         video.total_frames = msg.frames;
@@ -53,10 +53,12 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
   }
 
   function setProgressNoFrames(video) {
-    var progressBar = $("#transcoding-" + video.id);
-    progressBar.addClass("full-width");
-    progressBar.progress("set bar label", "Transcoding...");
-    progressBar.progress("set active");
+    $timeout(function() {
+      var progressBar = $("#transcoding-" + video.id);
+      progressBar.addClass("full-width");
+      progressBar.progress("set bar label", "Transcoding...");
+      progressBar.progress("set active");
+    }, 1000);
   }
 
   function updateProgress(video) {
@@ -69,9 +71,7 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
             $interval.cancel(frameCheckerInterval);
             progressBar.progress("reset");
             delete video.eta;
-            $timeout(function(){
-              setProgressNoFrames(video);
-            }, 1000);
+            setProgressNoFrames(video);
           } else {
             video.eta = (video.total_frames - msg.frames) / msg.fps;
             progressBar.progress({

@@ -167,7 +167,7 @@ function uploadShard(shard_data, callback, retry) {
         });
     }
   } catch (err) {
-    if (retry && retry > 10) {
+    if (retry && retry > 20) {
       log(err, "request.post Failure");
       removeSync(config.uploadDir + shard_data.id);
       msg.error = true;
@@ -180,7 +180,7 @@ function uploadShard(shard_data, callback, retry) {
       }
       setTimeout(function(){
         uploadShard(shard_data, callback, retry);
-      }, 500 * retry);
+      }, 1000 * pow(retry, 2));
     }
   }
 }
@@ -193,7 +193,7 @@ function log(msg, origin) {
   if (config.logging) {
     var log_file = fs.createWriteStream(__dirname + '/debug.log', {flags : 'a'});
     if (origin) {
-      var originMsg = "Error Origin: " + origin
+      var originMsg = "Error Origin: " + origin;
       console.log(originMsg);
       log_file.write(util.format(originMsg) + '\n');
     }

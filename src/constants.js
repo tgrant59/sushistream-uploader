@@ -15,7 +15,7 @@ app.constant("constants", {
     dollar: "#@#"
   },
   regex: {
-    videoFormats: /[^\s]+\.(webm|mkv|flv|ogg|ogv|avi|mov|qt|wmv|rm|rmvb|asf|mp4|m4v|mpg|mpeg|mp2|mpe|mpv|m2v|3gp|3g2)$/
+    videoFormats: /[^\s]+.*\.(webm|mkv|flv|ogg|ogv|avi|mov|qt|wmv|rm|rmvb|asf|mp4|m4v|mpg|mpeg|mp2|mpe|mpv|m2v|3gp|3g2)$/i
   },
   statuses: {
     queued: "queued",
