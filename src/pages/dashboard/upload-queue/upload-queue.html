@@ -10,7 +10,7 @@
           <div class="ui purple horizontal label" ng-if="upload.status === constants.statuses.queuedUpload">Waiting to Upload</div>
           <div class="ui blue horizontal label" ng-if="upload.status === constants.statuses.uploading">Uploading...</div>
           <div class="ui green horizontal label" ng-if="upload.status === constants.statuses.finished"><i class="check icon"></i> Finished</div>
-          <div class="ui red horizontal label" ng-if="upload.status === constants.statuses.aborted">Aborted</div>
+          <div class="ui orange horizontal label" ng-if="upload.status === constants.statuses.aborted">Aborted</div>
           <div class="ui red horizontal label" ng-if="upload.status === constants.statuses.error">Error</div>
 
           <span class="upload-queue-paths">

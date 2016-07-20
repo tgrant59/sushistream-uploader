@@ -21,7 +21,6 @@ fs.mkdirSync(config.tmpDir);
 fs.mkdirSync(config.uploadDir);
 
 function getVideoFrames(video, callback) {
-  log(video, "getVideoFrames");
   var ffprobeParams = config.bin.ffprobe.preParams.concat([video.path]).concat(config.bin.ffprobe.postParams);
   child_process.execFile(config.bin.ffprobe.path, ffprobeParams, function(err, stdout, stderr){
     var msg = {};
@@ -36,13 +35,11 @@ function getVideoFrames(video, callback) {
         msg.error = true;
       }
     }
-    log(msg, "getVideoFrames");
     callback(msg);
   });
 }
 
 function startTranscoding(video, callback) {
-  log(video, "startTranscoding");
   if (transcoder) {
     transcoder.kill();
   }
@@ -60,9 +57,11 @@ function startTranscoding(video, callback) {
       log(err, "transcoder child_process");
       removeSync(config.transcodingDir);
       msg.error = true;
-      callback(msg);
+      if (!err.killed) {
+        callback(msg);
+      }
     } else {
-      var newUploadDir = config.uploadDir + video.id + "/"
+      var newUploadDir = config.uploadDir + video.id + "/";
       fs.move(config.transcodingDir, newUploadDir.slice(0, -1), function(err){
         if (!err) {
           removeSync(config.transcodingDir);
@@ -93,7 +92,12 @@ function abortTranscoding(video) {
 }
 
 function checkProgress(video) {
-  let liner = new readlines(config.logfile);
+  let liner;
+  try {
+    liner = new readlines(config.logfile);
+  } catch (err) {
+    return;
+  }
   let line;
   let frames;
   let fps;
@@ -105,7 +109,7 @@ function checkProgress(video) {
       fps = lineSplit[1];
     }
   }
-  msg = {}
+  var msg = {};
   if (frames) {
     msg.frames = parseInt(frames);
   }

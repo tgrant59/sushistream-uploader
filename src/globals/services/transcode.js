@@ -1,6 +1,7 @@
 var app = angular.module("transcodeServiceModule", []);
 
 app.factory("transcodeService", function($rootScope, $timeout, $interval, constants, backgroundProcessService){
+  var frameCheckerInterval;
   return {
     startTranscoding: startTranscoding,
     abortTranscoding: abortTranscoding
@@ -19,7 +20,6 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
       id: video.id,
       path: video.file.path
     };
-    var frameCheckerInterval;
     backgroundProcessService.getVideoFrames(videoMsg, function(msg){
       if (msg.error) {
         setProgressNoFrames(video);
@@ -46,6 +46,7 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
 
   function abortTranscoding(video) {
     video.status = constants.statuses.aborted;
+    $interval.cancel(frameCheckerInterval);
     delete video.total_frames;
     delete video.eta;
     backgroundProcessService.abortTranscoding(video);
@@ -64,10 +65,19 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
         if (video.total_frames && msg.frames && msg.fps) {
           var progressBar = $("#transcoding-" + video.id);
           var progress = (msg.frames / video.total_frames) * 100;
-          video.eta = (video.total_frames - msg.frames) / msg.fps;
-          progressBar.progress({
-            value: progress
-          });
+          if (progress > 100) {
+            $interval.cancel(frameCheckerInterval);
+            progressBar.progress("reset");
+            delete video.eta;
+            $timeout(function(){
+              setProgressNoFrames(video);
+            }, 1000);
+          } else {
+            video.eta = (video.total_frames - msg.frames) / msg.fps;
+            progressBar.progress({
+              value: progress
+            });
+          }
         }
       });
   }
