@@ -24,7 +24,7 @@ app.factory("userService", function($q, $http, $rootScope, $state, $location, $c
   
   function logout(){
     uploadService.receiveUploadAbortAll();
-    transcodeService.receiveTranscodingAbortAll();
+    transcodeService.abortAllTranscodings();
     $rootScope.user = null;
     $rootScope.folder = null;
     $http.get(config.apiUrl + "/v1/auth/logout")

@@ -2,14 +2,17 @@ var app = angular.module("transcodeServiceModule", []);
 
 app.factory("transcodeService", function($rootScope, $timeout, $interval, constants, backgroundProcessService){
   var frameCheckerInterval;
+  var transcodingVideo;
   return {
     startTranscoding: startTranscoding,
-    abortTranscoding: abortTranscoding
+    abortTranscoding: abortTranscoding,
+    abortAllTranscodings: abortAllTranscodings
   };
 
   ///////////////
 
   function startTranscoding(video) {
+    transcodingVideo = video;
     video.status = constants.statuses.transcoding;
     $timeout(function () {
       $("#transcoding-" + video.id).progress({
@@ -32,6 +35,7 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
     });
     backgroundProcessService.startTranscoding(videoMsg, function(msg){
       $interval.cancel(frameCheckerInterval);
+      transcodingVideo = null;
       delete video.total_frames;
       delete video.eta;
       if (msg.error) {
@@ -45,6 +49,7 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
   }
 
   function abortTranscoding(video) {
+    transcodingVideo = null;
     video.status = constants.statuses.aborted;
     $interval.cancel(frameCheckerInterval);
     delete video.total_frames;
@@ -80,6 +85,12 @@ app.factory("transcodeService", function($rootScope, $timeout, $interval, consta
           }
         }
       });
+  }
+  
+  function abortAllTranscodings() {
+    if (transcodingVideo) {
+      abortTranscoding(transcodingVideo);
+    }
   }
   
 });
