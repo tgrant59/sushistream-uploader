@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html ng-app="app">
+  <head>
+    <script>
+      var background = require("electron-process").background;
+      background.registerModule(require("./background"));
+    </script>
+  </head>
+
+  <body>
+    <h1>Logging</h1>
+  </body>
+
+</html>

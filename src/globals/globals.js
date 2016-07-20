@@ -9,6 +9,7 @@ var app = angular.module("globalsModule", [
   "videoFolderNameFilterModule",
   "videoFormatFilterModule",
   // Services
+  "backgroundProcessServiceModule",
   "csrfServiceModule",
   "helpersServiceModule",
   "transcodeServiceModule",

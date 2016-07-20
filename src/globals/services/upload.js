@@ -1,6 +1,6 @@
 var app = angular.module("uploadServiceModule", []);
 
-app.factory("uploadService", function($rootScope, $http, $interval, ipc, constants, config){
+app.factory("uploadService", function($rootScope, $http, $interval, constants, config, backgroundProcessService){
   var uploadFinishedChecker;
   var videoUploading;
   var shardsUploading = [];
@@ -22,9 +22,6 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
     abortUpload: abortUpload,
     pauseUpload: pauseUpload,
     resumeUpload: resumeUpload,
-    loadShards: loadShards,
-    receiveUploadSuccess: receiveUploadSuccess,
-    receiveUploadError: receiveUploadError,
     receiveUploadAbortAll: receiveUploadAbortAll
   };
   
@@ -110,24 +107,6 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
     }
   }
 
-  function loadShards(msg) {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].id == msg.id) {
-        delete $rootScope.queuedUploads[i].total_frames;
-        delete $rootScope.queuedUploads[i].frames;
-        delete $rootScope.queuedUploads[i].fps;
-        delete $rootScope.queuedUploads[i].eta;
-        if (msg.error) {
-          $rootScope.queuedUploads[i].status = constants.statuses.error;
-        } else {
-          $rootScope.queuedUploads[i].shardsToUpload = msg.shardsToUpload;
-          $rootScope.queuedUploads[i].newSize = msg.size;
-          $rootScope.queuedUploads[i].status = constants.statuses.queuedUpload;
-        }
-      }
-    }
-  }
-
   //// Helpers
 
   function uploadVideoFiles(video) {
@@ -150,12 +129,19 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
           };
           $http.post(config.apiUrl + '/v1/video/upload/auth', params)
             .success(function(data){  // jshint ignore:line
-              ipc.send({
-                event: "upload-shard",
-                msg: {
-                  id: video.id,
-                  file: data.filename,
-                  signedUrl: data.presigned_url_data
+              var shardData = {
+                id: video.id,
+                file: data.filename,
+                signedUrl: data.presigned_url_data
+              };
+              backgroundProcessService.uploadShard(shardData, function(msg){
+                if (msg.error) {
+                  abortUpload(video);
+                  video.status = constants.statuses.error;
+                } else {
+                  var shardIndex = shardsUploading.indexOf(msg.file);
+                  shardsUploading.splice(shardIndex, 1);
+                  $("#upload-" + video.id).progress("increment");
                 }
               });
             }).error(function(){  // jshint ignore:line
@@ -170,25 +156,6 @@ app.factory("uploadService", function($rootScope, $http, $interval, ipc, constan
   }
 
   //// Event listeners
-
-  function receiveUploadSuccess(msg) {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].id == msg.id) {
-        var shardIndex = shardsUploading.indexOf(msg.file);
-        shardsUploading.splice(shardIndex, 1);
-        $("#upload-" + $rootScope.queuedUploads[i].id).progress("increment");
-      }
-    }
-  }
-
-  function receiveUploadError(msg) {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].id == msg.id) {
-        abortUpload($rootScope.queuedUploads[i]);
-        $rootScope.queuedUploads[i].status = constants.statuses.error;
-      }
-    }
-  }
   
   function receiveUploadAbortAll() {
     if ($rootScope.queuedUploads) {

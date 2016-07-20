@@ -4,6 +4,7 @@ app.constant("config", {
   withCredentials: true,
   apiUrl: "http://localhost:4000",
   externalUrl: "http://localhost:7000/#",
+  backgroundProcessModulePath: "../background",
   stripePlans: {
     "micro-monthly": {maxSize: 100000000000},
     "micro-annual": {maxSize: 100000000000},

@@ -20,6 +20,7 @@ module.exports = {
   openDevTools: true,
   logging: true,
   indexPath: "file://" + __dirname + "/dist/index.html",
+  backgroundPath: "file://" + __dirname + "/background.html",
   tmpDir: tmpDir,
   transcodingDir: tmpDir + "/transcoding/",
   uploadDir: tmpDir + "/upload/",

@@ -1,15 +1,9 @@
 var app = angular.module("transcodeServiceModule", []);
 
-app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
+app.factory("transcodeService", function($rootScope, $timeout, $interval, constants, backgroundProcessService){
   return {
     startTranscoding: startTranscoding,
-    abortTranscoding: abortTranscoding,
-    updateTranscodingFrames: updateTranscodingFrames,
-    updateTranscodingProgressFrames: updateTranscodingProgressFrames,
-    updateTranscodingProgressFps: updateTranscodingProgressFps,
-    receiveTranscodingError: receiveTranscodingError,
-    receiveTranscodingAbort: receiveTranscodingAbort,
-    receiveTranscodingAbortAll: receiveTranscodingAbortAll
+    abortTranscoding: abortTranscoding
   };
 
   ///////////////
@@ -21,18 +15,31 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
         value: 0
       });
     });
-    ipc.send({
-      event: "transcoding-frames",
-      msg: {
-        id: video.id,
-        path: video.file.path
+    var videoMsg = {
+      id: video.id,
+      path: video.file.path
+    };
+    var frameCheckerInterval;
+    backgroundProcessService.getVideoFrames(videoMsg, function(msg){
+      if (msg.error) {
+        setProgressNoFrames(video);
+      } else {
+        video.total_frames = msg.frames;
+        frameCheckerInterval = $interval(function(){
+          updateProgress(video);
+        }, 2000);
       }
     });
-    ipc.send({
-      event: "transcoding-start",
-      msg: {
-        id: video.id,
-        path: video.file.path
+    backgroundProcessService.startTranscoding(videoMsg, function(msg){
+      $interval.cancel(frameCheckerInterval);
+      delete video.total_frames;
+      delete video.eta;
+      if (msg.error) {
+        video.status = constants.statuses.error;
+      } else {
+        video.shardsToUpload = msg.shardsToUpload;
+        video.newSize = msg.size;
+        video.status = constants.statuses.queuedUpload;
       }
     });
   }
@@ -40,88 +47,29 @@ app.factory("transcodeService", function($rootScope, $timeout, ipc, constants){
   function abortTranscoding(video) {
     video.status = constants.statuses.aborted;
     delete video.total_frames;
-    delete video.frames;
-    delete video.fps;
     delete video.eta;
-    ipc.send({
-      event: "transcoding-abort",
-      msg: {
-        id: video.id
-      }
-    });
+    backgroundProcessService.abortTranscoding(video);
   }
 
-  function _update_progress(video) {
+  function setProgressNoFrames(video) {
     var progressBar = $("#transcoding-" + video.id);
-    if (video.noFrames) {
-      progressBar.addClass("full-width");
-      progressBar.progress("set bar label", "Transcoding...");
-      progressBar.progress("set active");
-    } else if (video.frames && video.total_frames && video.fps) {
-      var progress = (video.frames / video.total_frames) * 100;
-      video.eta = (video.total_frames - video.frames) / video.fps;
-      progressBar.progress({
-        value: progress
+    progressBar.addClass("full-width");
+    progressBar.progress("set bar label", "Transcoding...");
+    progressBar.progress("set active");
+  }
+
+  function updateProgress(video) {
+    backgroundProcessService.checkProgress(video)
+      .then(function(msg){
+        if (video.total_frames && msg.frames && msg.fps) {
+          var progressBar = $("#transcoding-" + video.id);
+          var progress = (msg.frames / video.total_frames) * 100;
+          video.eta = (video.total_frames - msg.frames) / msg.fps;
+          progressBar.progress({
+            value: progress
+          });
+        }
       });
-    }
   }
   
-  //// Event Handlers
-  
-  function updateTranscodingFrames(msg) {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].id == msg.id) {
-        if (msg.frames) {
-          $rootScope.queuedUploads[i].total_frames = msg.frames;
-        } else {
-          $rootScope.queuedUploads[i].noFrames = true;
-        }
-      }
-    }
-  }
-
-  function updateTranscodingProgressFrames(msg) {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].id == msg.id) {
-        $rootScope.queuedUploads[i].frames = msg.frames;
-        _update_progress($rootScope.queuedUploads[i]);
-      }
-    }
-  }
-
-  function updateTranscodingProgressFps(msg) {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].id == msg.id) {
-        $rootScope.queuedUploads[i].fps = msg.fps;
-        _update_progress($rootScope.queuedUploads[i]);
-      }
-    }
-  }
-  
-  function receiveTranscodingError(msg) {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].id == msg.id) {
-        $rootScope.queuedUploads[i].status = constants.statuses.error;
-      }
-    }
-  }
-  
-  function receiveTranscodingAbort(msg) {
-    for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-      if ($rootScope.queuedUploads[i].id == msg.id) {
-        $rootScope.queuedUploads[i].status = constants.statuses.aborted;
-      }
-    }
-  }
-  
-  function receiveTranscodingAbortAll() {
-    if ($rootScope.queuedUploads) {
-      for (var i = 0; i < $rootScope.queuedUploads.length; i++) {
-        if ($rootScope.queuedUploads[i].status === constants.statuses.transcoding) {
-          abortTranscoding($rootScope.queuedUploads[i]);
-        }
-      }
-    }
-  }
-
 });

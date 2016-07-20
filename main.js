@@ -1,97 +1,13 @@
 if(require('electron-squirrel-startup')) return;  // To make Squirrel.Windows work
 const electron = require("electron")
 const {app, BrowserWindow, Menu, shell, dialog, autoUpdater, crashReporter} = electron;
-const util = require("util");
-const child_process = require("child_process");
-const fs = require("fs-extra");
-const readlines = require("n-readlines");
-const request = require("superagent");
+const processManager = require('electron-process');
 const config = require("./config");
 
 // global scope variables
+let backgroundProcessHandler;
 let win;
-let transcoder;
-let transcoderVideoId;
-let frameChecker;
 let quit;
-
-// ---------------------------------------------------------------------------------------------------------------------
-//                                                  Window Setup
-// ---------------------------------------------------------------------------------------------------------------------
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
-
-function createWindow() {
-  // Set the Menu
-  Menu.setApplicationMenu(menu);
-  // Create the browser window.
-  win = new BrowserWindow({
-    width: 1000,
-    height: 600,
-    minWidth: 1000,
-    minHeight: 600
-  });
-
-  // and load the index.html of the app.
-  win.loadURL(config.indexPath);
-
-  // Open the DevTools.
-  if (config.openDevTools) {
-    win.webContents.openDevTools();
-  }
-
-  // Confirm on closing
-  win.on("close", function(e) {
-    e.preventDefault();
-    sendMessage("confirm-close");
-  });
-
-  // Emitted when the window is closed.
-  win.on("closed", function() {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
-    win = null;
-  });
-}
-
-function confirmClose(msg) {
-  if (msg.confirmOnClose) {
-    var choice = dialog.showMessageBox(win, {
-      type: "question",
-      buttons: ["Yes", "No"],
-      title: "Confirm",
-      message: "Are you sure you want to quit? Any transcoding or uploading jobs will be cancelled."
-    });
-    if (choice === 0) {
-      destroyWindow();
-    } else {
-      quit = false;
-    }
-  } else {
-    destroyWindow();
-  }
-}
-
-function destroyWindow() {
-  win.webContents.send("electron-msg", {
-    event: "uploading-abort",
-    msg: {}
-  });
-  if (transcoder) {
-    stopFrameChecker();
-    transcoder.kill();
-  }
-  transcoder = null;
-  transcoderVideoId = null;
-  // Give time for the uploading-abort message to reach the renderer
-  setTimeout(function(){
-    win.destroy();
-    if (quit) {
-      app.quit();
-    }
-  }, 500);
-}
 
 // ---------------------------------------------------------------------------------------------------------------------
 //                                                  App Setup
@@ -127,23 +43,87 @@ function appInit() {
   // Browser object communication controller
   electron.ipcMain.on("electron-msg", function(event, msg) {
     switch (msg.event) {
-      case "transcoding-frames":
-        getVideoFrames(msg.msg);
-        break;
-      case "transcoding-start":
-        startTranscoding(msg.msg);
-        break;
-      case "transcoding-abort":
-        abortTranscoding(msg.msg);
-        break;
-      case "upload-shard":
-        uploadShard(msg.msg);
-        break;
       case "confirm-close":
         confirmClose(msg.msg);
         break;
     }
   });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+//                                                  Window Setup
+// ---------------------------------------------------------------------------------------------------------------------
+// Keep a global reference of the window object, if you don't, the window will
+// be closed automatically when the JavaScript object is garbage collected.
+
+function createWindow() {
+  backgroundProcessHandler = processManager.main.createBackgroundProcess(config.backgroundPath, config.logging);
+  // Set the Menu
+  Menu.setApplicationMenu(menu);
+  // Create the browser window.
+  win = new BrowserWindow({
+    width: 1000,
+    height: 600,
+    minWidth: 1000,
+    minHeight: 600
+  });
+
+  // Background Process
+  backgroundProcessHandler.addWindow(win);
+
+  // and load the index.html of the app.
+  win.loadURL(config.indexPath);
+
+  // Open the DevTools.
+  if (config.openDevTools) {
+    win.webContents.openDevTools();
+  }
+
+  // Confirm on closing
+  win.on("close", function(e) {
+    e.preventDefault();
+    sendMessage("confirm-close");
+  });
+
+  // Emitted when the window is closed.
+  win.on("closed", function() {
+    // Dereference the window object, usually you would store windows
+    // in an array if your app supports multi windows, this is the time
+    // when you should delete the corresponding element.
+    win = null;
+  });
+
+
+}
+
+function confirmClose(msg) {
+  if (msg.confirmOnClose) {
+    var choice = dialog.showMessageBox(win, {
+      type: "question",
+      buttons: ["Yes", "No"],
+      title: "Confirm",
+      message: "Are you sure you want to quit? Any transcoding or uploading jobs will be cancelled."
+    });
+    if (choice === 0) {
+      destroyWindow();
+    } else {
+      quit = false;
+    }
+  } else {
+    destroyWindow();
+  }
+}
+
+function destroyWindow() {
+  sendMessage("uploading-abort");
+  processManager.foreground.getModule(require("./background")).abortTranscoding();
+  // Give time for the uploading-abort message to reach the renderer
+  setTimeout(function(){
+    win.destroy();
+    if (quit) {
+      app.quit();
+    }
+  }, 500);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -349,215 +329,7 @@ if (process.platform === "darwin") {
 
 const menu = Menu.buildFromTemplate(menuTemplate);
 
-// ---------------------------------------------------------------------------------------------------------------------
-//                                                  Transcoding Setup
-// ---------------------------------------------------------------------------------------------------------------------
-removeSync(config.tmpDir);
-fs.mkdirSync(config.tmpDir);
-fs.mkdirSync(config.uploadDir);
-
-function getVideoFrames(video) {
-  var ffprobeParams = config.bin.ffprobe.preParams.concat([video.path]).concat(config.bin.ffprobe.postParams);
-  child_process.execFile(config.bin.ffprobe.path, ffprobeParams, function(err, stdout, stderr){
-    var msg = {
-      id: video.id
-    }
-    if (err) {
-      log(err, "ffprobe child_process");
-      msg.error = true;
-    } else {
-      try {
-        msg.frames = parseInt(stdout);
-      } catch (err) {
-        log(err, "ffprobe parseInt");
-        video.noFrames = true;
-        msg.noFrames = true;
-      }
-    }
-    sendMessage("transcoding-frames", msg);
-  });
-}
-
-function startTranscoding(video) {
-  if (transcoder) {
-    stopFrameChecker();
-    transcoder.kill();
-  }
-  transcoderVideoId = video.id;
-  removeSync(config.transcodingDir);
-  fs.mkdirSync(config.transcodingDir);
-  var ffmpegParams = config.bin.ffmpeg.preParams.concat([video.path]).concat(config.bin.ffmpeg.postParams);
-  startFrameChecker(video);
-
-  transcoder = child_process.execFile(config.bin.ffmpeg.path, ffmpegParams, {maxBuffer: 10000 * 1024}, function(err) {
-    stopFrameChecker();
-    removeSync(config.logfile);
-    transcoder = null;
-    transcoderVideoId = null;
-    if (err) {
-      log(err, "transcoder child_process");
-      removeSync(config.transcodingDir);
-      sendMessage("transcoding-error", {
-        id: video.id,
-        err: err
-      });
-    } else {
-      var newUploadDir = config.uploadDir + video.id + "/"
-      fs.move(config.transcodingDir, newUploadDir.slice(0, -1), function(err){
-        if (!err) {
-          removeSync(config.transcodingDir);
-          var files = fs.readdirSync(newUploadDir);
-          var folderSize = 0;
-          for (var i = 0; i < files.length; i++) {
-            folderSize = folderSize + fs.statSync(newUploadDir + files[i]).size;
-          }
-          sendMessage("transcoding-finished", {
-            id: video.id,
-            shardsToUpload: files,
-            size: folderSize
-          });
-        } else {
-          log(err, "fs move");
-          sendMessage("transcoding-error", {
-            id: video.id
-          });
-        }
-      });
-    }
-  });
-}
-
-function abortTranscoding(video) {
-  if (transcoder && transcoderVideoId === video.id) {
-    transcoder.kill();
-    transcoder = null;
-    stopFrameChecker();
-    transcoderVideoId = null;
-    removeSync(config.transcodingDir);
-    sendMessage("transcoding-abort", {
-      id: video.id
-    });
-  }
-}
-
-// --------- Frame Checker ----------
-
-function startFrameChecker(video) {
-  if (frameChecker) {
-    stopFrameChecker();
-  }
-  frameChecker = setInterval(function() {
-    let liner = new readlines(config.logfile);
-    let line;
-    let frames;
-    let fps;
-    while (line = liner.next()) {
-      lineSplit = line.toString('ascii').split("=");
-      if (lineSplit[0] === "frame" && !video.noFrames) {
-        frames = lineSplit[1];
-      } else if (lineSplit[0] === "fps" && !video.noFrames) {
-        fps = lineSplit[1];
-      }
-    }
-    if (frames) {
-      sendMessage("transcoding-progress-frames", {
-        id: video.id,
-        frames: parseInt(frames)
-      });
-    }
-    if (fps) {
-      sendMessage("transcoding-progress-fps", {
-        id: video.id,
-        fps: parseFloat(fps)
-      });
-    }
-  }, 2000);
-}
-
-function stopFrameChecker() {
-  if (frameChecker) {
-    clearInterval(frameChecker);
-  }
-  frameChecker = null;
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-//                                                  Upload Setup
-// ---------------------------------------------------------------------------------------------------------------------
-
-function uploadShard(msg, retry) {
-  try {
-    if ("x-amz-security-token" in msg.signedUrl.fields) {  // Production
-      request
-        .post(msg.signedUrl.url)
-        .field("key", msg.signedUrl.fields.key)
-        .field("AWSAccessKeyId", msg.signedUrl.fields.AWSAccessKeyId)
-        .field("Policy", msg.signedUrl.fields.policy)
-        .field("Signature", msg.signedUrl.fields.signature)
-        .field("x-amz-security-token", msg.signedUrl.fields["x-amz-security-token"])
-        .attach("file", config.uploadDir + msg.id + "/" + msg.file)
-        .end(function (err, res) {
-          if (err) {
-            log(err, "request.post Production");
-            log(res);
-            removeSync(config.uploadDir + msg.id);
-            sendMessage("uploading-error", {
-              id: msg.id
-            });
-          } else {
-            sendMessage("uploading-success", {
-              id: msg.id,
-              filename: msg.file
-            });
-          }
-        });
-    } else {  // Development
-      request
-        .post(msg.signedUrl.url)
-        .field("key", msg.signedUrl.fields.key)
-        .field("AWSAccessKeyId", msg.signedUrl.fields.AWSAccessKeyId)
-        .field("Policy", msg.signedUrl.fields.policy)
-        .field("Signature", msg.signedUrl.fields.signature)
-        .attach("file", config.uploadDir + msg.id + "/" + msg.file)
-        .end(function (err, res) {
-          if (err) {
-            log(err, "request.post Development");
-            log(res);
-            removeSync(config.uploadDir + msg.id);
-            sendMessage("uploading-error", {
-              id: msg.id
-            });
-          } else {
-            sendMessage("uploading-success", {
-              id: msg.id,
-              filename: msg.file
-            });
-          }
-        });
-    }
-  } catch (err) {
-    if (retry && retry > 10) {
-      log(err, "request.post Failure");
-      removeSync(config.uploadDir + msg.id);
-      removeSync("uploading-error", {
-        id: msg.id
-      });
-    } else {
-      if (!retry) {
-        retry = 1;
-      } else {
-        retry = retry + 1
-      }
-      setTimeout(function(){
-        uploadShard(msg, retry);
-      }, 1000);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-//                                                  Helper Functions
-// ---------------------------------------------------------------------------------------------------------------------
+// -------- Helpers --------
 
 function sendMessage(event, msg) {
   if (win) {
@@ -575,22 +347,5 @@ function log(msg, origin) {
     }
     console.log(msg);
     sendMessage("log", msg);
-  }
-}
-
-function removeSync(file) {
-  var i = 0;
-  var error;
-  while (i < 10) {
-    try {
-      fs.removeSync(file);
-      break;
-    } catch (err) {
-      error = err;
-    }
-  }
-  if (i === 10) {
-    log("removeSync Failed 10 Times", "removeSync");
-    throw error;
   }
 }
