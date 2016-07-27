@@ -5,6 +5,7 @@ app.constant("config", {
   apiUrl: "http://localhost:4000",
   externalUrl: "http://localhost:7000/#",
   backgroundProcessModulePath: "../background",
+  concurrentUploadShards: 1,
   stripePlans: {
     "micro-monthly": {maxSize: 100000000000},
     "micro-annual": {maxSize: 100000000000},

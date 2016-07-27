@@ -118,41 +118,45 @@ app.factory("uploadService", function($rootScope, $http, $interval, constants, c
         clearInterval(uploadFinishedChecker);
         uploadFinishedChecker = null;
         completeUpload(video);
-      } else if (shardsUploading.length < 3 && !video.paused) {
+      } else if (shardsUploading.length < config.concurrentUploadShards && !video.paused) {
         var i = 0;
-        while (shardsUploading.length < 3 && i < video.shardsToUpload.length) {
+        while (shardsUploading.length < config.concurrentUploadShards && i < video.shardsToUpload.length) {
           shardsUploading.push(video.shardsToUpload[i]);
-          var params = {
-            key: video.key,
-            path: video.folder.path,
-            filename: video.shardsToUpload[i]
-          };
-          $http.post(config.apiUrl + '/v1/video/upload/auth', params)
-            .success(function(data){  // jshint ignore:line
-              var shardData = {
-                id: video.id,
-                file: data.filename,
-                signedUrl: data.presigned_url_data
-              };
-              backgroundProcessService.uploadShard(shardData, function(msg){
-                if (msg.error) {
-                  abortUpload(video);
-                  video.status = constants.statuses.error;
-                } else {
-                  var shardIndex = shardsUploading.indexOf(msg.file);
-                  shardsUploading.splice(shardIndex, 1);
-                  $("#upload-" + video.id).progress("increment");
-                }
-              });
-            }).error(function(){  // jshint ignore:line
-              abortUpload(video);
-              video.status = constants.statuses.error;
-            });
+          uploadShard(video, video.shardsToUpload[i]);
           i++;
         }
         video.shardsToUpload = video.shardsToUpload.slice(i);
       }
     }, 500);
+  }
+
+  function uploadShard(video, shardFilename) {
+    var params = {
+      key: video.key,
+      path: video.folder.path,
+      filename: shardFilename
+    };
+    $http.post(config.apiUrl + '/v1/video/upload/auth', params)
+      .success(function(data){
+        var shardData = {
+          id: video.id,
+          file: data.filename,
+          signedUrl: data.presigned_url_data
+        };
+        backgroundProcessService.uploadShard(shardData, function(msg){
+          if (msg.error) {
+            abortUpload(video);
+            video.status = constants.statuses.error;
+          } else {
+            var shardIndex = shardsUploading.indexOf(msg.file);
+            shardsUploading.splice(shardIndex, 1);
+            $("#upload-" + video.id).progress("increment");
+          }
+        });
+      }).error(function(){
+        abortUpload(video);
+        video.status = constants.statuses.error;
+      });
   }
 
   //// Event listeners
